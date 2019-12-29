@@ -39,10 +39,10 @@ Strategy.prototype.authenticate = async function (req, options) {
 
         self.success(user, info);
     }
-    if (!data.phone) {
+    if (!data.countryCode || !data.mobile) {
         return this.error({
             statusCode: 400,
-            message: "phone is required"
+            message: "enter country code and mobile number"
         });
     }
     if (!data.token) {

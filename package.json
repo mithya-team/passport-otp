@@ -1,0 +1,23 @@
+{
+  "name": "passport-otp",
+  "version": "1.0.0",
+  "description": "Phone OTP authentication via passport.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/saurabhg22/passport-otp.git"
+  },
+  "keywords": [
+    "passport",
+    "otp"
+  ],
+  "author": "Saurabh Gupta",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/saurabhg22/passport-otp/issues"
+  },
+  "homepage": "https://github.com/saurabhg22/passport-otp#readme"
+}

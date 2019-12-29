@@ -56,7 +56,8 @@ Strategy.prototype.sendToken = async (req, phone) => {
 Strategy.prototype.authenticate = async function (req, options) {
     const self = this;
     let data = Object.assign(req.query, req.body) || {};
-    const phone = data.countryCode + data.mobile;
+    // const phone = data.countryCode + data.mobile;
+    const phone = req.body.countryCode + req.body.mobile;
     console.log('PHONE IN THE AUTHENTICATION FUNCTION :',phone);
     function verified(err, user, info) {
         if (err) { return self.error(err); }

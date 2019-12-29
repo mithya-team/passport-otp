@@ -13,7 +13,7 @@ const Strategy = function (options, verify) {
     passport.Strategy.call(this);
     this.name = 'otp';
     this._verify = verify;
-    this.messageProvider = options.messageProvider;
+    this._messageProvider = options.messageProvider;
 }
 
 Strategy.prototype.sendToken = async (req, phone) => {

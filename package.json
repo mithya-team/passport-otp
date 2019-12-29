@@ -19,5 +19,8 @@
   "bugs": {
     "url": "https://github.com/saurabhg22/passport-otp/issues"
   },
-  "homepage": "https://github.com/saurabhg22/passport-otp#readme"
+  "homepage": "https://github.com/saurabhg22/passport-otp#readme",
+  "dependencies": {
+    "speakeasy": "^2.0.0"
+  }
 }

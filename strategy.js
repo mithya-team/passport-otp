@@ -1,6 +1,6 @@
 'use strict';
 const passport = require('passport-strategy');
-var passport = require('speakeasy')
+var speakeasy = require('speakeasy')
 
 const Strategy = function (options, verify) {
 

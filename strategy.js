@@ -1,7 +1,9 @@
 'use strict';
 const passport = require('passport-strategy');
 var speakeasy = require('speakeasy')
-
+const OtpSecret = require('./models/OtpSecret')
+const mongoose = require('mongoose');
+mongoose.connect('mongodb://localhost/otpDatabase');
 const Strategy = function (options, verify) {
 
     if (typeof options == 'function') {
@@ -27,34 +29,52 @@ Strategy.prototype.sendToken = async (req, phone) => {
         encoding: 'base32'
     });
 
-    this._messageProvider(phone,token);
-    return res.json({
-        statusCode: 202,
-        message: "TOKEN_SENT"
+    var secretSave = new OtpSecret({
+        phone : phone,
+        secret : secret.base64
     });
+
+    console.log('This is the generated token :',token);
+    secretSave.save().then(()=>{
+        if(!secret.isNew == false){
+            return res.json({
+                message:'some error occured, please try again'
+            });
+        }else{
+            console.log('**************************************************data saved to the database')
+        }
+        return res.json({
+            statusCode: 202,
+            message: "TOKEN_SENT"
+        });
+    });
+    
+    // this._messageProvider(phone,token);z
+
 }
 
 Strategy.prototype.authenticate = async function (req, options) {
     const self = this;
-
     let data = Object.assign(req.query, req.body) || {};
+    const phone = data.countryCode + data.mobile;
+
     function verified(err, user, info) {
         if (err) { return self.error(err); }
         if (!user) { return self.fail(info); }
-
+        
         self.success(user, info);
     }
-    if (!data.countryCode || !data.mobile) {
+    if (!phone) {
         return this.error({
             statusCode: 400,
             message: "enter country code and mobile number"
         });
     }
     if (!data.token) {
-        return this.sendToken(req, data.countryCode + data.mobile);
+        return this.sendToken(req, phone);
     }
     else {
-        const isValidToken = await this.verifyToken(data.phone, data.token);
+        const isValidToken = await this.verifyToken(phone, data.token);
         if (!isValidToken) {
             return this.error({
                 statusCode: 400,
@@ -62,16 +82,26 @@ Strategy.prototype.authenticate = async function (req, options) {
             })
         }
         return this._verify(req, null, null, {
-            phone: data.phone,
-            username: data.phone
+            phone: phone,
+            username: phone
         }, verified);
     }
 
 }
 
-Strategy.prototype.verifyToken = async (phone, token) => {
+Strategy.prototype.verifyToken = async (phone, tokenEnteredByUser) => {
     // TODO Create logic to validate token
-    return phone === token;
+
+    OtpSecret.findOneAndDelete({phone:phone}).then((result)=>{
+        // console.log(result.phone + '   ' + result.secret);
+        var tokenValidates = speakeasy.totp.verify({
+                    secret:result.secret.base64,
+                    encoding:'base64',
+                    token: tokenEnteredByUser,
+                    window : 6
+                });
+        return tokenValidates;
+    });
 }
 
 

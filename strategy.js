@@ -19,7 +19,7 @@ const Strategy = function (options, verify) {
 }
 
 Strategy.prototype.sendToken = async (req, phone) => {
-
+    console.log('phone in the sendToken():',phone)
     const res = req.res;
 
     // TODO Generate and send token to the phone number.
@@ -57,7 +57,7 @@ Strategy.prototype.authenticate = async function (req, options) {
     const self = this;
     let data = Object.assign(req.query, req.body) || {};
     const phone = data.countryCode + data.mobile;
-
+    console.log('PHONE IN THE AUTHENTICATION FUNCTION :',phone);
     function verified(err, user, info) {
         if (err) { return self.error(err); }
         if (!user) { return self.fail(info); }
@@ -91,7 +91,7 @@ Strategy.prototype.authenticate = async function (req, options) {
 
 Strategy.prototype.verifyToken = async (phone, tokenEnteredByUser) => {
     // TODO Create logic to validate token
-
+    console.log(phone);
     OtpSecret.findOneAndDelete({phone:phone}).then((result)=>{
         // console.log(result.phone + '   ' + result.secret);
         var tokenValidates = speakeasy.totp.verify({

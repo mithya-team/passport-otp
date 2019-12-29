@@ -4,7 +4,7 @@ const Schema = mongoose.Schema;
 
 const OtpSecretSchema  = new Schema({
     phone : String,
-    secret : Number
+    secret : String
 });
 
 const OtpSecret = mongoose.model('OtpSecret',OtpSecretSchema);

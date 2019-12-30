@@ -21,7 +21,6 @@
   },
   "homepage": "https://github.com/saurabhg22/passport-otp#readme",
   "dependencies": {
-    "mongoose": "^5.8.3",
     "speakeasy": "^2.0.0"
   },
   "devDependencies": {}

@@ -12,7 +12,7 @@ const Strategy = function (options, verify) {
     this.name = 'otp';
     this._verify = verify;
     this._messageProvider = options.messageProvider;
-    this._modelName = options.modelToSaveGeneratdKeys;
+    this._modelName = options.modelToSaveGeneratedKeys;
 }
 
 
@@ -45,6 +45,7 @@ Strategy.prototype.authenticate = async function (req, options) {
     const self = this;
     let data = Object.assign(req.query, req.body) || {};
     var phone = data.countryCode + data.mobile;
+    var email = data.email;
     console.log('this is the query paramas: ', req.query)
     // const phone = req.body.countryCode + req.body.mobile;
     console.log('PHONE IN THE AUTHENTICATION FUNCTION :', phone);
@@ -66,7 +67,7 @@ Strategy.prototype.authenticate = async function (req, options) {
     else {
         const isValidToken = await this.verifyToken(req, phone, data.token);
 
-        if (isValidToken == 1) {
+        if (isValidToken == 2) {
             return this.error({
                 statusCode: 400,
                 message: "This mobile number doesn't exist in our database."
@@ -78,11 +79,19 @@ Strategy.prototype.authenticate = async function (req, options) {
                 message: "INVALID_TOKEN"
             })
         }
+
+        var emails;
+        if (!email) {
+            emails = [{ 'value': phone + '@anonymous.com' }];
+        } else {
+            emails = [{ 'value': email }]
+        }
+
         return this._verify(req, null, null, {
             phone: phone,
             username: phone,
-            emails: phone + '@anonymous.com',
-            id: phone
+            emails: emails,
+            id: phone,
         }, verified);
     }
 

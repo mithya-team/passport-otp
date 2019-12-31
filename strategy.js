@@ -1,6 +1,7 @@
 'use strict';
 const passport = require('passport-strategy');
 var speakeasy = require('speakeasy')
+var findcountryCodes = require('./countryCodes');
 const Strategy = function (options, verify) {
 
     if (typeof options == 'function') {
@@ -44,7 +45,25 @@ Strategy.prototype.sendToken = async function (req, phone) {
 Strategy.prototype.authenticate = async function (req, options) {
     const self = this;
     let data = Object.assign(req.query, req.body) || {};
-    var phone = data.countryCode + data.mobile;
+    var countryCode = data.countryCode;
+    var mobile = data.mobile;
+
+    if (!findcountryCodes(countryCode)) {
+        return this.error({
+            statusCode: 400,
+            message: 'Invalid country code'
+        });
+    }
+
+    var phoneValidation = /^\d{10}$/;
+    if (!mobile.match(phoneValidation)) {
+        return this.error({
+            statusCode: 400,
+            message: 'Invalid mobile number'
+        });
+    }
+
+    var phone = countryCode + mobile;
     var email = data.email;
     console.log('this is the query paramas: ', req.query)
     // const phone = req.body.countryCode + req.body.mobile;

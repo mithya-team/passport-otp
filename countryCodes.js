@@ -1540,20 +1540,17 @@ var countryCodes = [
     }
   ];
   
-  // console.log(countryCodes.dial_code);
-  // var countryCodesArray = [countryCodes.length];
   var find = function (x) {
-    var flag = 0;
-    for (var i = 0; i < countryCodes.length; i++) {
-        if(x == countryCodes[i].dial_code){
-          flag = 1;
-        }
-    }
-    if(!flag){
+    var find = countryCodes.find(function(element){
+      return element.dial_code == '+91';
+    });
+    if(!find){
       return false;
     }
     return true;
   }
-  
+
+
+  console.log(find);
   module.exports = find;
   

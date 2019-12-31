@@ -14,12 +14,12 @@ const Strategy = function (options, verify) {
     passport.Strategy.call(this);
     this.name = 'otp';
     this._verify = verify;
-    this._messageProvider = options.messageProvider;
+    this._messageProvider = options.messageProvider; // This is custom sms service callback function, if it is not provided then defaut twilioService will be used.
     this._modelName = options.modelToSaveGeneratedKeys;
     this._sendOtpVia = options.sendOtpVia;
     this._email = options.userInfoForEmail[0].gmail;
     this._password = options.userInfoForEmail[1].password;
-    this._keys = options.twilioKeys;
+    this._twilioInfo = options.twilioInfo;
 }
 
 
@@ -36,7 +36,7 @@ Strategy.prototype.sendToken = async function (req, emailOrPhone) {
 
     this._sendOtpVia == 'email' ?
         sendEmail(this._email, this._password, emailOrPhone, token) :
-        (!this._messageProvider ? twilioService(emailOrPhone,token,this._keys) : this._messageProvider(emailOrPhone, token));
+        (!this._messageProvider ? twilioService(emailOrPhone,token,this._twilioInfo) : this._messageProvider(emailOrPhone, token));
 
     console.log('This is the generated token :', token);
     return res.json({
@@ -49,11 +49,18 @@ Strategy.prototype.authenticate = async function (req, options) {
     const self = this;
     var email, phone;
     let data = Object.assign(req.query, req.body) || {};
-    if (this._messageProvider == 'phone') {
+    function verified(err, user, info) {
+        if (err) { return self.error(err); }
+        if (!user) { return self.fail(info); }
+
+        self.success(user, info);
+    }
+
+    if (this._sendOtpVia == 'phone') {
         var countryCode = data.countryCode;
         var mobile = data.mobile;
         // Country code validation
-        if (!findcountryCodes(countryCode)) {
+        if (!countryCode || !findcountryCodes(countryCode)) {
             return this.error({
                 statusCode: 400,
                 message: 'Invalid country code'
@@ -61,7 +68,7 @@ Strategy.prototype.authenticate = async function (req, options) {
         }
         // mobile number validation
         var phoneValidation = /^\d{10}$/;
-        if (!mobile.match(phoneValidation)) {
+        if (!mobile || !mobile.match(phoneValidation)) {
             return this.error({
                 statusCode: 400,
                 message: 'Invalid mobile number'
@@ -83,18 +90,11 @@ Strategy.prototype.authenticate = async function (req, options) {
         }
     }
 
-    function verified(err, user, info) {
-        if (err) { return self.error(err); }
-        if (!user) { return self.fail(info); }
-
-        self.success(user, info);
-    }
-
     if (!data.token) {
         return self.sendToken.call(
             self,
             req,
-            this._messageProvider == 'phone' ? phone : email
+            this._sendOtpVia == 'phone' ? phone : email
         );
     }
     else {

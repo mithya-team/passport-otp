@@ -17,9 +17,8 @@ const Strategy = function (options, verify) {
     this._messageProvider = options.messageProvider; // This is custom sms service callback function, if it is not provided then defaut twilioService will be used.
     this._modelName = options.modelToSaveGeneratedKeys;
     this._sendOtpVia = options.sendOtpVia;
-    this._email = options.userInfoForEmail[0].gmail;
-    this._password = options.userInfoForEmail[1].password;
     this._twilioInfo = options.twilioInfo;
+    this._emailInfo = options.emailInfo;
 }
 
 Strategy.prototype.sendToken = async function (req, emailOrPhone) {
@@ -35,7 +34,7 @@ Strategy.prototype.sendToken = async function (req, emailOrPhone) {
 
         req.app.models[this._modelName].create({ phone: emailOrPhone, secret: secret.base32 });
         let result = this._sendOtpVia == 'email' ?
-            await sendEmail(this._email, this._password, emailOrPhone, token) :
+            await sendEmail(this._emailInfo, emailOrPhone, token) :
             (!this._messageProvider ? await twilioService(emailOrPhone, token, this._twilioInfo) : await this._messageProvider(emailOrPhone, token));
 
         console.log(result);

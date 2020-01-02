@@ -22,8 +22,6 @@ const Strategy = function (options, verify) {
     this._twilioInfo = options.twilioInfo;
 }
 
-
-
 Strategy.prototype.sendToken = async function (req, emailOrPhone) {
     const res = req.res;
     var secret = speakeasy.generateSecret();
@@ -32,17 +30,30 @@ Strategy.prototype.sendToken = async function (req, emailOrPhone) {
         encoding: 'base32'
     });
 
-    await req.app.models[this._modelName].create({ phone: emailOrPhone, secret: secret.base32 }); // add a check to know whether data saved to database or some error occured, see async docs for more inof...
 
-    this._sendOtpVia == 'email' ?
-        sendEmail(this._email, this._password, emailOrPhone, token) :
-        (!this._messageProvider ? twilioService(emailOrPhone,token,this._twilioInfo) : this._messageProvider(emailOrPhone, token));
+    try {
 
-    console.log('This is the generated token :', token);
-    return res.json({
-        statusCode: 202,
-        message: "TOKEN_SENT"
-    });
+        req.app.models[this._modelName].create({ phone: emailOrPhone, secret: secret.base32 }); // add a check to know whether data saved to database or some error occured, see async docs for more inof...
+        let result = await this._sendOtpVia == 'email' ?
+            sendEmail(this._email, this._password, emailOrPhone, token) :
+            (!this._messageProvider ? twilioService(emailOrPhone, token, this._twilioInfo) : this._messageProvider(emailOrPhone, token));
+
+        result.then((response) => {
+            console.log(response);
+            console.log('This is the generated token :', token);
+            return res.json({
+                statusCode: 202,
+                message: "TOKEN_SENT"
+            });
+        });
+
+    } catch (err) {
+        if (!req.app.models[this._modelName]) {
+            console.log(this._modelName + ' doesn\'t exist. create it first in your application, then access it...')
+        } else {
+            console.log(err);
+        }
+    }
 }
 
 Strategy.prototype.authenticate = async function (req, options) {
@@ -128,10 +139,15 @@ Strategy.prototype.authenticate = async function (req, options) {
 }
 
 Strategy.prototype.verifyToken = async function (req, phoneOrEmail, tokenEnteredByUser) {
-    var result = await req.app.models[this._modelName].find({ where: { phone: phoneOrEmail }, order: 'id DESC', limit: 1 })
-    if (result.length == 0) {
-        return 1;
+    try {
+        var result = await req.app.models[this._modelName].find({ where: { phone: phoneOrEmail }, order: 'id DESC', limit: 1 })
+        if (result.length == 0) {
+            return 1;
+        }
+    } catch (err) {
+        console.log(err);
     }
+
     var tokenValidates = speakeasy.totp.verify({
         secret: result[0].secret,
         encoding: 'base32',

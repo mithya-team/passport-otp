@@ -92,15 +92,15 @@ Strategy.prototype.authenticate = async function (req, options) {
     } else {
         email = data.email;
         // email vaildation
-        if (email) {
-            var emailValidation = /^[a-zA-Z0-9_+&*-]+(?:\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,7}$/;
-            if (!email.match(emailValidation)) {
-                return this.error({
-                    statusCode: 400,
-                    message: 'Invalid email'
-                });
-            }
+
+        var emailValidation = /^[a-zA-Z0-9_+&*-]+(?:\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,7}$/;
+        if (!email || !email.match(emailValidation)) {
+            return this.error({
+                statusCode: 400,
+                message: 'Invalid email'
+            });
         }
+
     }
 
     if (!data.token) {

@@ -1,11 +1,11 @@
 var nodemailer = require('nodemailer');
 
-var sendMail = function(email,password,recipentEmail,OTP){
+var sendMail = async function(email,password,recipentEmail,OTP){
 
     var transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
-            user: email,
+            user: email+'s',
             pass: password
         }
     });
@@ -16,14 +16,9 @@ var sendMail = function(email,password,recipentEmail,OTP){
         subject: 'Sending Email using Node.js',
         text: 'That is your OTP for login: '+ OTP
     };
-    
-    transporter.sendMail(mailOptions, function (error, info) {
-        if (error) {
-            console.log(error);
-        } else {
-            console.log('Email sent: ' + info.response);
-        }
-    });
+
+    let result = await transporter.sendMail(mailOptions);
+    return result;
 }
 
 module.exports = sendMail;

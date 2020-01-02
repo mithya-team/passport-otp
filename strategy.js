@@ -33,18 +33,16 @@ Strategy.prototype.sendToken = async function (req, emailOrPhone) {
 
     try {
 
-        req.app.models[this._modelName].create({ phone: emailOrPhone, secret: secret.base32 }); // add a check to know whether data saved to database or some error occured, see async docs for more inof...
-        let result = await this._sendOtpVia == 'email' ?
-            sendEmail(this._email, this._password, emailOrPhone, token) :
-            (!this._messageProvider ? twilioService(emailOrPhone, token, this._twilioInfo) : this._messageProvider(emailOrPhone, token));
+        req.app.models[this._modelName].create({ phone: emailOrPhone, secret: secret.base32 });
+        let result = this._sendOtpVia == 'email' ?
+            await sendEmail(this._email, this._password, emailOrPhone, token) :
+            (!this._messageProvider ? await twilioService(emailOrPhone, token, this._twilioInfo) : await this._messageProvider(emailOrPhone, token));
 
-        result.then((response) => {
-            console.log(response);
-            console.log('This is the generated token :', token);
-            return res.json({
-                statusCode: 202,
-                message: "TOKEN_SENT"
-            });
+        console.log(result);
+        console.log('This is the generated token :', token);
+        return res.json({
+            statusCode: 202,
+            message: "TOKEN_SENT"
         });
 
     } catch (err) {
@@ -52,6 +50,10 @@ Strategy.prototype.sendToken = async function (req, emailOrPhone) {
             console.log(this._modelName + ' doesn\'t exist. create it first in your application, then access it...')
         } else {
             console.log(err);
+            return res.json({
+                statusCode: 400,
+                message: "error occured"
+            });
         }
     }
 }

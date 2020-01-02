@@ -6,17 +6,16 @@ var messageProvider = async function (phone, token, twilioInfo) {
   const client = require('twilio')(accountSid, authToken);
 
 
-  try {
-    let result = await client.messages
-      .create({
-        body: 'This is your OTP for login: ' + token,
-        from: mobileNumber ,
-        to: phone // phone number actually consists of country code and 10 digit mobile number
-      });
 
-      return result.sid;
-  } catch (error) {
-    console.log(error);
-  }
+  let result = await client.messages
+    .create({
+      body: 'This is your OTP for login: ' + token,
+      from: mobileNumber,
+      to: phone // phone number actually consists of country code and 10 digit mobile number
+    });
+
+  return result;
+
+
 }
 module.exports = messageProvider;

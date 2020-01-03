@@ -17,10 +17,26 @@ const Strategy = function (options, verify) {
     this._messageProvider = options.messageProvider; // This is custom sms service callback function, if it is not provided then defaut twilioService will be used.
     this._modelName = options.modelToSaveGeneratedKeys;
     this._sendOtpVia = options.sendOtpVia;
-    this._messageClient = (this._sendOtpVia === 'phone' ? new TwilioService(options.twilioInfo) : new EmailService(options.emailInfo);
+    if (!this._messageProvider || this._sendOtpVia == 'email') {
+        this._messageClient = this._sendOtpVia === 'phone' ?
+            new TwilioService(options.twilioInfo) : new EmailService(options.emailInfo);
+    }
+
 }
 
 Strategy.prototype.authenticate = async function (req, options) {
+    if (!req.app.models[this._modelName]) {
+        console.error(
+            'Model ' + this._modelName + ' doesn\'t exist.\nPossible Solution --------->\n'
+            + '1. Create a model with schema as follow: '
+            + 'phone(string), secret(string).\n2. Pass the name of model/collection in the provider.json file under the "otp" module configuration as follows:\n'
+            + '```\n"modelToSaveGeneratedKeys":"YOUR MODEL NAME"\n```\n');
+
+        return req.res.json({
+            statusCode: 400,
+            message: "error occured"
+        });
+    }
     const self = this;
     var phone;
     let data = Object.assign(req.query, req.body) || {};
@@ -32,7 +48,7 @@ Strategy.prototype.authenticate = async function (req, options) {
             await self.validate(data.email);
 
         (!data.token) ?
-            self.sendToken.call(self, req, self._sendOtpVia == 'phone' ? phone : email) :
+            self.sendToken.call(self, req, self._sendOtpVia == 'phone' ? phone : data.email) :
             self.submitToken.call(self, data.token, req, phone, data.email);
     } catch (e) {
         console.error(e.message);
@@ -53,8 +69,12 @@ Strategy.prototype.sendToken = async function (req, emailOrPhone) {
 
     try {
         req.app.models[this._modelName].create({ phone: emailOrPhone, secret: secret.base32 });
-        let result = await this._messageClient.sendMessage(emailOrPhone, token);
-        console.log('Message Sent. Details ---->\n', result);
+        var result;
+        !this._messageProvider || this._sendOtpVia == 'email' ?
+            result = await this._messageClient.sendMessage(emailOrPhone, token) :
+            result = await this._messageProvider(emailOrPhone, token);
+
+        console.log('\n\nMessage Status : '+ result.status + '\nDetails -------------->\n', result);
         console.log('This is the generated token :', token);
         return res.json({
             statusCode: 202,

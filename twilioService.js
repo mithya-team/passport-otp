@@ -1,21 +1,27 @@
-var messageProvider = async function (phone, token, twilioInfo) {
+class TwilioService {
+  constructor(twilioInfo) {
+    if (!twilioInfo.mobileNumber || !twilioInfo.accountSid || !twilioInfo.authToken)
+      throw new Error(
+        '\nPlease provide all the fields of "twilioInfo" in the provider.json file.\n Example --------------------------------->\n'
+        + '```\n"twilioInfo": {\n'
+        + '"accountSid": "<YOUR_TWILIO_ACCOUNT_SID>",\n'
+        + '"authToken": "YOUR_TWILIO_ACCONT_AUTH_TOKEN",\n'
+        + '"mobileNumber": "<YOUR TWILIO MOBILE NUMBER>"\n}\n````'
+        + '\nYou may visit your twilio account to get all these credentials.\n');
 
-  const accountSid = twilioInfo[0].accountSid;
-  const authToken = twilioInfo[1].authToken;
-  const mobileNumber = twilioInfo[2].mobileNumber;
-  const client = require('twilio')(accountSid, authToken);
+    this._mobileNumber = twilioInfo.mobileNumber;
+    this._client = require('twilio')(twilioInfo.accountSid, twilioInfo.authToken);
+  }
+  sendMessage = async (phone, token) => {
+    let result = await this._client.messages
+      .create({
+        body: 'This is your OTP for login: ' + token,
+        from: this._mobileNumber,
+        to: phone
+      })
 
-
-
-  let result = await client.messages
-    .create({
-      body: 'This is your OTP for login: ' + token,
-      from: mobileNumber,
-      to: phone // phone number actually consists of country code and 10 digit mobile number
-    });
-
-  return result;
-
-
+    return result;
+  }
 }
-module.exports = messageProvider;
+
+module.exports = TwilioService;

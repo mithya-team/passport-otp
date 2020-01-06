@@ -17,7 +17,7 @@ const Strategy = function (options, verify) {
     this._messageProvider = options.messageProvider; // This is custom sms service callback function, if it is not provided then defaut twilioService will be used.
     this._modelName = options.modelToSaveGeneratedKeys;
     this._sendOtpVia = options.sendOtpVia;
-    if (!this._messageProvider || this._sendOtpVia == 'email') {
+    if (!this._messageProvider) {
         this._messageClient = this._sendOtpVia === 'phone' ?
             new TwilioService(options.twilioInfo) : new EmailService(options.emailInfo);
     }
@@ -37,19 +37,24 @@ Strategy.prototype.authenticate = async function (req, options) {
             message: "error occured"
         });
     }
+
     const self = this;
     var phone;
-    let data = Object.assign(req.query, req.body) || {};
-    var phoneInfo = [data.countryCode, data.mobile]
 
     try {
-        self._sendOtpVia == 'phone' ?
-            phone = await self.validate(phoneInfo) :
-            await self.validate(data.email);
 
-        (!data.token) ?
-            self.sendToken.call(self, req, self._sendOtpVia == 'phone' ? phone : data.email) :
-            self.submitToken.call(self, data.token, req, phone, data.email);
+        if (!req.body.token) {
+            self._sendOtpVia == 'phone' ?
+            phone = await self.validate([req.query.countryCode, req.query.mobile]) :
+            await self.validate(req.query.email);
+            self.sendToken.call(self, req, self._sendOtpVia == 'phone' ? phone : req.query.email) 
+        } else {
+            self._sendOtpVia == 'phone' ?
+            phone = await self.validate([req.body.countryCode, req.body.mobile]) :
+            await self.validate(req.body.email);
+            self.submitToken.call(self, req.body.token, req, phone, req.body.email);
+        }
+
     } catch (e) {
         console.error(e.message);
         return req.res.json({
@@ -68,13 +73,13 @@ Strategy.prototype.sendToken = async function (req, emailOrPhone) {
     });
 
     try {
-        req.app.models[this._modelName].create({ phone: emailOrPhone, secret: secret.base32 });
+        req.app.models[this._modelName].create({ identity: emailOrPhone, secret: secret.base32 });
         var result;
-        !this._messageProvider || this._sendOtpVia == 'email' ?
+        !this._messageProvider ?
             result = await this._messageClient.sendMessage(emailOrPhone, token) :
-            result = await this._messageProvider(emailOrPhone, token);
+            result = await this._messageProvider(this.sendOtpVia, emailOrPhone, token);
 
-        console.log('\n\nMessage Status : '+ result.status + '\nDetails -------------->\n', result);
+        console.log('\n\nMessage Status : ' + result.status + '\nDetails -------------->\n', result);
         console.log('This is the generated token :', token);
         return res.json({
             statusCode: 202,
@@ -130,7 +135,7 @@ Strategy.prototype.submitToken = async function (token, req, phone, email) {
 }
 
 Strategy.prototype.verifyToken = async function (req, phoneOrEmail, tokenEnteredByUser) {
-    var result = await req.app.models[this._modelName].find({ where: { phone: phoneOrEmail }, order: 'id DESC', limit: 1 })
+    var result = await req.app.models[this._modelName].find({ where: { identity: phoneOrEmail }, order: 'id DESC', limit: 1 })
     if (result.length == 0) {
         throw new Error(phoneOrEmail + ' doesn\'t exist in our database...');
     }

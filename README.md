@@ -44,7 +44,7 @@
 - "sendOtpVia" field can be "phone" or "email" depending upon your choice of sending OTP via email or SMS. Accordingly you will have to provide information regarding email and SMS service in the "emailInfo" and "twilioInfo" fields respectively.
 - For overriding the default email service (i.e gmail) and default SMS service (i.e gmail), refer to [this](#examples---passport-otp-example) example
 
-## Examples - passport-otp--example
+## Examples - passport-otp-example
 
 Developers using the popular [Loopback](https://loopback.io/) web framework can
 refer to an [example](https://github.com/yash17525/loopback-project-authentication.git)

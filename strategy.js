@@ -45,13 +45,17 @@ Strategy.prototype.authenticate = async function (req, options) {
 
         if (!req.body.token) {
             self._sendOtpVia == 'phone' ?
-            phone = await self.validate([req.query.countryCode, req.query.mobile]) :
+            await self.validate([req.query.countryCode, req.query.mobile]) :
             await self.validate(req.query.email);
+
+            var phone = req.query.countryCode + req.query.mobile;
             self.sendToken.call(self, req, self._sendOtpVia == 'phone' ? phone : req.query.email) 
         } else {
             self._sendOtpVia == 'phone' ?
-            phone = await self.validate([req.body.countryCode, req.body.mobile]) :
+            await self.validate([req.body.countryCode, req.body.mobile]) :
             await self.validate(req.body.email);
+
+            var phone = req.body.countryCode + req.body.mobile
             self.submitToken.call(self, req.body.token, req, phone, req.body.email);
         }
 
@@ -105,7 +109,6 @@ Strategy.prototype.validate = async function (emailOrPhone) {
         if (!countryCode || !findcountryCodes(countryCode)) { throw new Error('Invalid Country Code'); }
         var phoneValidation = /^\d{10}$/;
         if (!mobile || !mobile.match(phoneValidation)) { throw new Error('Invalid mobile number'); }
-        return countryCode + mobile;
     }
 }
 

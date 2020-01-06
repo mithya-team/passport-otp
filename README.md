@@ -42,7 +42,7 @@
 - "callbackPath" is the endpoint where you will have to make a POST request with OTP,mobile number,country code or with OTP,email-id.
 - "modelToSaveGenerateKeys" is the model where the passport-otp module will save generated token secret. This model will have schema as , identity(string),secret(string). "secret" field will be used to save the generated secret and identity field will be used to save email or phone number.
 - "sendOtpVia" field can be "phone" or "email" depending upon your choice of sending OTP via email or SMS. Accordingly you will have to provide information regarding email and SMS service in the "emailInfo" and "twilioInfo" fields respectively.
-- For overriding the default email service (i.e gmail) and default SMS service (i.e gmail), refer to [this](#examples---passport-otp-example) example
+- For overriding the default email service (i.e gmail) and default SMS service (i.e gmail), refer to the provided example below.
 
 ## Examples - passport-otp-example
 

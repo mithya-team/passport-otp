@@ -17,6 +17,7 @@ const Strategy = function (options, verify) {
     this._messageProvider = options.messageProvider; // This is custom sms service callback function, if it is not provided then defaut twilioService will be used.
     this._modelName = options.modelToSaveGeneratedKeys;
     this._sendOtpVia = options.sendOtpVia;
+    this._window = (!options.window)? 6 : options.window;
     if (!this._messageProvider) {
         this._messageClient = this._sendOtpVia === 'phone' ?
             new TwilioService(options.twilioInfo) : new EmailService(options.emailInfo);
@@ -146,7 +147,7 @@ Strategy.prototype.verifyToken = async function (req, phoneOrEmail, tokenEntered
         secret: result[0].secret,
         encoding: 'base32',
         token: tokenEnteredByUser,
-        window: 6
+        window: this._window
     });
     if (!tokenValidates) { throw new Error('Invalid token'); }
 }

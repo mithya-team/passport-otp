@@ -10,12 +10,13 @@ class TwilioService {
         + '\nYou may visit your twilio account to get all these credentials.\n');
 
     this._mobileNumber = twilioInfo.mobileNumber;
+    this._message = (!twilioInfo.messageBody) ? '' : twilioInfo.messageBody;
     this._client = require('twilio')(twilioInfo.accountSid, twilioInfo.authToken);
   }
   sendMessage = async (phone, token) => {
     let result = await this._client.messages
       .create({
-        body: 'This is your OTP for login: ' + token,
+        body: this._message +'. This is your OTP for login: ' + token,
         from: this._mobileNumber,
         to: phone
       })

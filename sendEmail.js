@@ -3,9 +3,10 @@ class EmailService {
     constructor(emailInfo) {
         this._email = emailInfo.gmail;
         this._password = emailInfo.password;
-        this._subject = emailInfo.emailSubject;
+        this._subject = (!emailInfo.emailSubject) ? 'OTP Sent from Twilio': emailInfo.emailSubject ;
+        this._message = (!emailInfo.messageBody) ? '' : emailInfo.messageBody ;
 
-        if (!this._email || !this._password || !this._subject)
+        if (!this._email || !this._password)
             throw new Error(
                 '\nPlease provide all the fields of "emailInfo" in the provider.json file.\n Example--------------------------------->\n'
                 + '```\n"emailInfo": {\n'
@@ -26,7 +27,7 @@ class EmailService {
             from: this._email,
             to: recipentEmail,
             subject: this._subject,
-            text: 'That is your OTP for login: ' + OTP
+            text: this._message + '. This is your OTP for login: ' + OTP
         };
 
         let result = await this._transporter.sendMail(mailOptions);

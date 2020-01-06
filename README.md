@@ -28,13 +28,16 @@
     "emailInfo": {
       "gmail": "YOUR_GMAIL_ID",
       "password": "GMAIL_PASSWORD",
-      "emailSubject": "OTP for login to <YOUR_APPLICATION_NAME>"
+      "emailSubject": "<Email Subject> , this field is optional",
+      "messageBody" : "<Message Body> this field is optional"
     },
     "twilioInfo": {
       "accountSid": "TWILIO_ACCOUNT_SID",
       "authToken":"TWILIO_ACCOUNT_AUTH_TOKEN",
-      "mobileNumber": "TWILIO_ACCOUNT_MOBILE_NUMBER"
-    }
+      "mobileNumber": "TWILIO_ACCOUNT_MOBILE_NUMBER",
+      "messageBody" : "<Message Body> this field is optional"
+    },
+    "window":"<window>"
   }
 ```
 
@@ -43,6 +46,8 @@
 - "modelToSaveGenerateKeys" is the model where the passport-otp module will save generated token secret. This model will have schema as , identity(string),secret(string). "secret" field will be used to save the generated secret and identity field will be used to save email or phone number.
 - "sendOtpVia" field can be "phone" or "email" depending upon your choice of sending OTP via email or SMS. Accordingly you will have to provide information regarding email and SMS service in the "emailInfo" and "twilioInfo" fields respectively.
 - For overriding the default email service (i.e gmail) and default SMS service (i.e gmail), refer to the provided example below.
+-  This window field will determine the time for which token will remain valid. By default, this is equal to 6. To know more 
+ about 'window' refer to [speakeasy](https://www.npmjs.com/package/speakeasy) documentation for generating time based tokens.
 
 ## Examples - passport-otp-example
 

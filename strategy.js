@@ -12,7 +12,6 @@ const Strategy = function (options, verify) {
     }
     this.callbackURL = options.callbackPath
     passport.Strategy.call(this);
-    this.name = 'otp';
     this._verify = verify;
     this._messageProvider = options.messageProvider; // This is custom sms service callback function, if it is not provided then defaut twilioService will be used.
     this._modelName = options.modelToSaveGeneratedKeys;

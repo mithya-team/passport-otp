@@ -1,6 +1,5 @@
 {
   "name": "Otp",
-  "plural": "Otps",
   "base": "PersistedModel",
   "idInjection": true,
   "options": {

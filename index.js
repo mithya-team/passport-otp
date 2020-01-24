@@ -10,10 +10,15 @@ function loadModel(jsonFile) {
   });
 }
 
-//Export Otp Model
+// Export Otp Model
 var OtpModel = loadModel("./lib/models/Otp.json");
 exports.Otp = module.exports.Otp = require("./lib/models/Otp")(OtpModel);
 exports.Otp.autoAttach = "db";
+
+//Export Twilio Model
+var TwilioModel = loadModel("./lib/models/Twilio.json");
+exports.Twilio = module.exports.Twilio = require("./lib/models/Twilio")(TwilioModel);
+exports.Twilio.autoAttach = "db";
 
 // Load modules.
 const Strategy = require("./strategy");

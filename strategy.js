@@ -30,7 +30,7 @@ Strategy.prototype.authenticate = async function(req, options) {
         this._modelName +
         " doesn't exist.\nPossible Solution --------->\n" +
         "1. Create a model with schema as follow: " +
-        'phone(string), secret(string).\n2. Pass the name of model/collection in the provider.json file under the "otp" module configuration as follows:\n' +
+        'phone(string), secret(string).\n2. Pass the name of model/collection in the authConfig.json file under the "otp" module configuration as follows:\n' +
         '```\n"otpModel":"YOUR MODEL NAME"\n```\n'
     );
 
@@ -108,7 +108,7 @@ Strategy.prototype.sendToken = async function(req, multiData) {
     if (this._messageProvider) {
       result = await this._messageProvider(this._sendOtpVia, multiData, token);
     } else {
-      throw new Error(`Override method messageProvider in your config.json`);
+      throw new Error(`Override method messageProvider in your authConfig.json`);
       result = await this._messageClient.sendMessage(emailOrPhone, token);
     }
 

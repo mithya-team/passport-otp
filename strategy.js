@@ -1,12 +1,15 @@
 "use strict";
 const passport = require("passport-strategy");
 var speakeasy = require("speakeasy");
-var findcountryCodes = require("./countryCodes");
 var _ = require("lodash");
-
-var err=()=>{
-  throw new Error(`Override method messageProvider(type,data,token) in your passport.js`);
-}
+var validate = require("./lib/util").validate;
+var err = () => {
+  throw new Error(
+    `Override method messageProvider(type,data,token) in your passport.js`
+  );
+};
+var moment = require("moment");
+var cryptr = require("crypto");
 const Strategy = function(options, verify) {
   if (typeof options == "function") {
     verify = options;
@@ -15,12 +18,21 @@ const Strategy = function(options, verify) {
   this.callbackURL = options.callbackPath;
   passport.Strategy.call(this);
   this._verify = verify;
-  this._messageProvider = options.messageProvider|| err()  // This is custom sms service callback function, if it is not provided then defaut twilioService will be used.
+  this._messageProvider = options.messageProvider; // This is custom sms service callback function, if it is not provided then defaut twilioService will be used.
+  if (!this._messageProvider) {
+    err();
+  }
   this._modelName = options.otpModel || "Otp";
   this._sendOtpVia = options.sendOtpVia;
   this._window = options.window || 6;
-
-
+  this._resendEnabled = options.resendEnabled || true;
+  this._resendAfter = options.resendAfter || false;
+  this._otpDigits = options.digits;
+  this._totpData = {
+    encoding: "base32",
+    digits: this._otpDigits,
+    window: this._window
+  };
 };
 
 Strategy.prototype.authenticate = async function(req, options) {
@@ -43,38 +55,49 @@ Strategy.prototype.authenticate = async function(req, options) {
   const self = this;
   var phone;
   this._sendOtpVia = req.body.type;
-  var phone = [req.body.countryCode, req.body.mobile] || req.body.phone;
-  var email = req.body.email || "";
+  var phone = [req.body.countryCode, req.body.phone] || false;
+  var email = req.body.email || false;
   var data = email || phone;
   var phoneRaw = phone.join("");
-
-  if (req.body.type === "multi") {
-    if (phoneRaw.length == 0 || email.length == 0) {
-      return req.res.json({
-        statusCode: 400,
-        message: "Provide both email and phone"
-      });
+  try {
+    if (req.body.type) {
+      if (req.body.type === "phone") {
+        await validate(phone, "phone");
+      } else if (req.body.type === "email") {
+        await validate(email, "email");
+      } else if (req.body.type === "multi") {
+        await validate({ phone, email }, "multi");
+      } else {
+        return req.res.json({
+          status: 400,
+          message: `INVALID_TYPE`
+        });
+      }
+    } else {
+      if (req.body.email) {
+        await validate(email, "email");
+      } else if (req.body.phone) {
+        await validate(phone, "phone");
+      } else {
+        return req.res.json({
+          status: 400,
+          message: `INVALID_TYPE`
+        });
+      }
     }
+  } catch (err) {
+    return req.res.json({
+      status: 400,
+      message: err.message
+    });
   }
-  var multiData = {
-    phone: phoneRaw.length ? phoneRaw : false,
-    email: email.length ? email : false
-  };
+
+  var multiData = { phone, email };
   try {
     if (!req.body.token) {
-      await self.validate(data);
-
-      var phone = phoneRaw;
       self.sendToken.call(self, req, multiData);
     } else {
-      if (
-        Array.isArray(data.phone) ||
-        (data.email && data.email.length !== 0)
-      ) {
-        await self.validate(data);
-      }
-
-      self.submitToken.call(self, req.body.token, req, phoneRaw, email);
+      self.submitToken.call(self, req.body.token, req, phone, email);
     }
   } catch (e) {
     console.error(e.message);
@@ -85,32 +108,100 @@ Strategy.prototype.authenticate = async function(req, options) {
   }
 };
 
-Strategy.prototype.sendToken = async function(req, multiData) {
-  const res = req.res;
-  var secret = speakeasy.generateSecret();
-  var token = speakeasy.totp({
-    secret: secret.base32,
-    encoding: "base32"
+var checkReRequestTime = async function(req, data) {
+  let OtpModel = req.app.models[this._modelName];
+  let phoneIdentity = { countryCode: data.phone[0], phone: data.phone[1] }; //Check for this
+  var result = await OtpModel.findOne({
+    where: {
+      or: [
+        {
+          and: [
+            { "phoneIdentity.countryCode": phoneIdentity.countryCode },
+            { "phoneIdentity.phone": phoneIdentity.phone }
+          ]
+        },
+        { emailIdentity: data.email }
+      ]
+    },
+    order: "id DESC"
+  });
+  if (!result) return false;
+  let lastAttempt = result.attempt.lastAttempt;
+  let timeDiff = moment().diff(lastAttempt, "seconds");
+  if (timeDiff < this._resendAfter) {
+    throw new Error(
+      `You can resend OTP after ${this._resendAfter - timeDiff} seconds`
+    );
+  }
+  let secret = result.secret;
+  var token = speakeasy.totp(
+    _.defaults(
+      {
+        secret: secret
+      },
+      this._totpData
+    )
+  );
+
+  let nAttempts = result.attempt.attempts || 0;
+  await result.updateAttribute("attempt", {
+    lastAttempt: new Date(),
+    attempts: nAttempts + 1
   });
 
-  try {
-    for (let data in multiData) {
-      let dat = multiData[data];
-      if (dat) {
-        req.app.models[this._modelName].create({
-          identity: dat,
-          secret: secret.base32
-        });
-      }
-    }
+  let res = await sendDataViaProvider.call(this, data, token);
+  console.log(
+    "\n\nMessage Status : " + res.status + "\nDetails -------------->\n",
+    res
+  );
+  console.log("This is the generated token :", token);
+  return {
+    statusCode: res.status,
+    message: "TOKEN_SENT"
+  };
+};
 
-    var result;
-    if (this._messageProvider) {
-      result = await this._messageProvider(this._sendOtpVia, multiData, token);
-    } else {
-      throw new Error(`Override method messageProvider in your authConfig.json`);
-      result = await this._messageClient.sendMessage(emailOrPhone, token);
+Strategy.prototype.sendToken = async function(req, multiData) {
+  if (this._resendAfter) {
+    try {
+      let done = await checkReRequestTime.call(this, req, multiData);
+      if (done) {
+        return req.res.json(done);
+      }
+    } catch (err) {
+      return req.res.json({
+        status: 400,
+        message: err.message
+      });
     }
+  }
+
+  const res = req.res;
+  var secret = speakeasy.generateSecret();
+  var token = speakeasy.totp(
+    _.defaults(
+      {
+        secret: secret.base32
+      },
+      this._totpData
+    )
+  );
+  let attemptH;
+  try {
+    let emailIdentity = multiData.email;
+    let phoneIdentity = {
+      countryCode: multiData.phone[0],
+      phone: multiData.phone[1]
+    };
+    let OtpModel = req.app.models[this._modelName];
+    OtpModel.create({
+      phoneIdentity: phoneIdentity,
+      emailIdentity: emailIdentity,
+      secret: secret.base32,
+      attempt: { attemptHash: attemptH }
+    });
+
+    var result = await sendDataViaProvider.call(this, multiData, token);
 
     console.log(
       "\n\nMessage Status : " + result.status + "\nDetails -------------->\n",
@@ -118,7 +209,7 @@ Strategy.prototype.sendToken = async function(req, multiData) {
     );
     console.log("This is the generated token :", token);
     return res.json({
-      statusCode: 202,
+      statusCode: result.status,
       message: "TOKEN_SENT"
     });
   } catch (err) {
@@ -130,32 +221,23 @@ Strategy.prototype.sendToken = async function(req, multiData) {
   }
 };
 
-Strategy.prototype.validate = async function(emailOrPhone) {
-  if (Array.isArray(emailOrPhone)) {
-    var countryCode = emailOrPhone[0];
-    var mobile = emailOrPhone[1];
-    if (!countryCode || !findcountryCodes(countryCode)) {
-      throw new Error("Invalid Country Code");
-    }
-    var phoneValidation = /^\d{10}$/;
-    if (!mobile || !mobile.match(phoneValidation)) {
-      throw new Error("Invalid mobile number");
-    }
-  } else {
-    var emailValidation = /^[a-zA-Z0-9_+&*-]+(?:\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,7}$/;
-    if (!emailOrPhone || !emailOrPhone.match(emailValidation)) {
-      throw new Error("Invalid Email");
-    }
+var sendDataViaProvider = async function(multiData, token) {
+  let result;
+  try {
+    result = await this._messageProvider(this._sendOtpVia, multiData, token);
+    return result;
+  } catch (error) {
+    throw new Error(error.message);
   }
 };
 
 Strategy.prototype.submitToken = async function(token, req, phone, email) {
   const self = this;
-  var data = _.defaultTo(email, phone);
-  var email = email||req.body.email || "";
-  var phone = phone||req.body.phone || "";
+  var data = { phone, email };
+  var email = email;
+  var phone = phone;
   try {
-    await self.verifyToken(req, data, token);
+    let result=await self.verifyToken(req, data, token);
     function verified(err, user, info) {
       if (err) {
         return self.error(err);
@@ -170,12 +252,7 @@ Strategy.prototype.submitToken = async function(token, req, phone, email) {
       null,
       null,
       {
-        phone: phone||email,
-        username: email||phone,
-        emails: !email
-          ? [{ value: phone + "@anonymous.com" }]
-          : [{ value: email }],
-        id: email||phone
+        result
       },
       verified
     );
@@ -188,29 +265,40 @@ Strategy.prototype.submitToken = async function(token, req, phone, email) {
   }
 };
 
-Strategy.prototype.verifyToken = async function(
-  req,
-  phoneOrEmail,
-  tokenEnteredByUser
-) {
-  var phoneOrEmail = req.body.phone || req.body.email;
-  var result = await req.app.models[this._modelName].find({
-    where: { identity: phoneOrEmail },
-    order: "id DESC",
-    limit: 1
+Strategy.prototype.verifyToken = async function(req, data, tokenEnteredByUser) {
+  let OtpModel = req.app.models[this._modelName];
+  let phoneIdentity = { countryCode: data.phone[0], phone: data.phone[1] };
+  var result = await OtpModel.findOne({
+    where: {
+      or: [
+        {
+          and: [
+            { "phoneIdentity.countryCode": phoneIdentity.countryCode },
+            { "phoneIdentity.phone": phoneIdentity.phone }
+          ]
+        },
+        { emailIdentity: data.email }
+      ]
+    },
+    order: "id DESC"
   });
-  if (result.length == 0) {
-    throw new Error(phoneOrEmail + " doesn't exist in our database...");
+  if (result) console.log(`Identity for ${data} was found.\n${result}`);
+  if (!result) {
+    throw new Error(`INVALID_DATA`);
   }
-  var tokenValidates = speakeasy.totp.verify({
-    secret: result[0].secret,
-    encoding: "base32",
-    token: tokenEnteredByUser,
-    window: this._window
-  });
+  let verifDataOps = _.defaults(
+    {
+      secret: result.secret,
+      token: tokenEnteredByUser
+    },
+    this._totpData
+  );
+  var tokenValidates = speakeasy.totp.verify(verifDataOps);
+
   if (!tokenValidates) {
     throw new Error("Invalid token");
   }
+  return result
 };
 
 // Expose constructor.

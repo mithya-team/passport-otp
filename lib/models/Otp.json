@@ -6,11 +6,31 @@
     "validateUpsert": true
   },
   "properties": {
+    "emailIdentity": {
+      "type": "string"
+    },
+    "phoneIdentity": {
+      "countryCode": {
+        "type": "string"
+      },
+      "phone": {
+        "type": "string"
+      }
+    },
     "identity": {
       "type": "string"
     },
     "secret": {
       "type": "string"
+    },
+    "attempt": {
+      "lastAttempt": {
+        "type": "date",
+        "default": "$now"
+      },
+      "attempts": {
+        "type": "number"
+      }
     }
   },
   "validations": [],

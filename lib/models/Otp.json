@@ -24,12 +24,12 @@
       "type": "string"
     },
     "attempt": {
-      "lastAttempt": {
-        "type": "date",
-        "default": "$now"
+      "type": {
+        "lastAttempt": "date",
+        "attempts": "number"
       },
-      "attempts": {
-        "type": "number"
+      "default": {
+        "lastAttempt": "$now"
       }
     }
   },

@@ -4,7 +4,7 @@
   "description": "Phone OTP authentication via passport.",
   "main": "index.js",
   "scripts": {
-    "test": "mocha"
+    "test": "mocha --require ts-node/register --watch-extensions ts,tsx \"test/**/*.{ts,tsx}\""
   },
   "repository": {
     "type": "git",
@@ -31,6 +31,10 @@
     "twilio": "^3.39.1"
   },
   "devDependencies": {
-    "mocha": "^7.0.1"
+    "chai": "^4.2.0",
+    "chai-as-promised": "^7.1.1",
+    "mocha": "^7.0.1",
+    "ts-node": "^8.6.2",
+    "typescript": "^3.7.5"
   }
 }

@@ -30,6 +30,7 @@ const Strategy = function(options, verify) {
   if (this.entryFlow) {
     this.entryFlow = true;
   }
+  this.passOptions = options.passOptions || false;
   // this._window = options.window || 6;
   this._resendEnabled = options.resendEnabled || true;
   this._resendAfter = options.resendAfter || false;
@@ -38,7 +39,7 @@ const Strategy = function(options, verify) {
   }
   this._otpDigits = options.digits;
   this.method = options.method || "multiOr";
-  
+
   this._verificationRequired = options.verificationRequired && true;
   this._totpData = {
     encoding: "base32",
@@ -129,13 +130,21 @@ Strategy.prototype.authenticate = async function(req, options) {
     let user = await getUser.call(this, data, req);
 
     let { secret, token } = createNewToken(this._totpData);
-    await checkReRequestTime.call(this, req, data);
+    if (type === "multi" && this.strictOtp) {
+      token = { email: token };
+      token.phone = createNewToken(this._totpData, secret);
+    }
     let query = getQuery("or", email, phone);
     console.log(query);
     let otpObj = { ...data, secret };
     if (req.body.password) {
-      otpObj.password = req.body.password;
+      await validate(
+        { options: this.passOptions, pass: req.body.password },
+        "pass"
+      );
+      otpObj.password = User.hashPassword(req.body.password);
     }
+    await checkReRequestTime.call(this, req, data);
     let otp = await Otp.findOrCreate(query, otpObj);
     if (otp[1] === false) {
       secret = otp[0].secret;
@@ -267,7 +276,7 @@ var getQuery = function(type, email = false, phone = false) {
   return queryOr;
 };
 
-var defaultCallback = (self, type, email, phone, result, redirect) => (
+var defaultCallback = (self, type, email, phone, result, redirect) => async (
   err,
   user,
   info
@@ -279,7 +288,8 @@ var defaultCallback = (self, type, email, phone, result, redirect) => (
     return self.fail(info);
   }
   if (result.password) {
-    user.updateAttribute("password", result.password);
+    await user.updateAttribute("password", result.password);
+    await user.updateAttribute("passwordSetup", true);
   }
   // todo WARN can verify both
   if (phone && phone.countryCode && email) {

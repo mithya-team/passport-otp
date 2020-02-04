@@ -79,7 +79,7 @@ Strategy.prototype.authenticate = async function(req, options) {
     // if (req.body.customMailFn) {
     //   this.customMailFn = req.body.customMailFn;
     // }
-    
+
     const self = this;
     let entryFlow = this.entryFlow;
     let email = req.body.email || false;
@@ -97,11 +97,13 @@ Strategy.prototype.authenticate = async function(req, options) {
 
     if (phone) {
       if (!phone.countryCode || !phone.phone) {
+        // && instead of || ??
         return res.json({
           status: 400,
           message: `INVALID_PHONE_DATA`
         });
       }
+      phone.countryCode = this.defaultCountryCode || phone.countryCode;
       await validate([phone.countryCode, phone.phone], "phone");
       data.phone = phone;
     } else {
@@ -133,33 +135,16 @@ Strategy.prototype.authenticate = async function(req, options) {
       }
     }
     let type;
-    if (data.phone && data.phone.countryCode) {
+    if (data.phone && data.phone.phone) {
       type = "phone";
     }
     if (data.email) {
       type = "email";
     }
-    if (data.phone && data.phone.countryCode && data.email) {
+    if (data.phone && data.phone.phone && data.email) {
       type = "multi";
     }
-    if (req.body.userIns) {
-      //this is an authenticated request
-      let userIns = req.body.userIns;
-      // if (!data.email) {
-      //   email = userIns.email;
-      //   data.email = userIns.email;
-      // }
-      // if (!data.phone && !data.phone.phone) {
-      //   phone = userIns.phone;
-      //   data.phone = userIns.phone;
-      // }
-      // if (!data.email && !data.phone) {
-      //   return req.res.json({
-      //     status: 500,
-      //     message: `INVALID_AUTH_REQUEST`
-      //   });
-      // }
-    }
+
     if (req.body.token) {
       return await self.submitToken.call(self, req, data, req.body.token, type);
     }
@@ -171,7 +156,7 @@ Strategy.prototype.authenticate = async function(req, options) {
     // }
     let userIns = req.body.userIns;
 
-    let query = getQuery("or", email, phone);
+    let query = getQuery.call(this, "or", email, phone);
     console.log(query);
     let otpObj = { ...data };
     if (req.body.password) {
@@ -197,7 +182,10 @@ Strategy.prototype.authenticate = async function(req, options) {
       otpData.secretPhone = secret;
       otpData.phone = phone;
       let tokenPhone = token;
-      let otp = await Otp.findOrCreate(getQuery("and", email, phone), otpData);
+      let otp = await Otp.findOrCreate(
+        getQuery.call(this, "and", email, phone),
+        otpData
+      );
       if (otp[1] === true) {
         if (userIns) {
           await otp[0].updateAttribute("userId", userIns.id);
@@ -246,7 +234,9 @@ Strategy.prototype.authenticate = async function(req, options) {
         // }
         await checkReRequestTime.call(this, req, { email });
         let { secret, token } = createNewToken(this._totpData);
-
+        if (req.body.password) {
+          otpData.password = User.hashPassword(req.body.password);
+        }
         otpData.secretEmail = secret;
         otpData.email = email;
         let otp = await Otp.findOrCreate(
@@ -300,6 +290,7 @@ Strategy.prototype.authenticate = async function(req, options) {
         let otpData = {};
         otpData.secretPhone = secret;
         otpData.phone = phone;
+        phone.countryCode = this.defaultCountryCode || phone.countryCode;
         let otp = await Otp.findOrCreate(
           {
             where: {
@@ -347,7 +338,9 @@ Strategy.prototype.authenticate = async function(req, options) {
 var checkReRequestTime = async function(req, data, qFrmt) {
   qFrmt = qFrmt || "or";
   let Otp = req.app.models[this._modelName];
-  var result = await Otp.findOne(getQuery(qFrmt, data.email, data.phone));
+  var result = await Otp.findOne(
+    getQuery.call(this, qFrmt, data.email, data.phone)
+  );
   if (!result) return true;
   let lastAttempt = _.get(result, `attempt.lastAttempt`, false);
   if (!lastAttempt) {
@@ -387,18 +380,19 @@ var createNewToken = function(totpData, secret) {
 
 var sendDataViaProvider = async function(data, token) {
   let type, phone;
-  if (data.phone && data.phone.countryCode) {
+  if (data.phone && data.phone.phone) {
     type = "phone";
+    data.phone.countryCode = this.defaultCountryCode || data.phone.countryCode;
     phone = [data.phone.countryCode, data.phone.phone].join("");
   }
   if (data.email) {
     type = "email";
   }
-  if (data.phone && data.phone.countryCode && data.email) {
+  if (data.phone && data.phone.phone && data.email) {
     type = "multi";
   }
   let User = this._UserModel;
-  let query = getQuery(type, data.email, data.phone);
+  let query = getQuery.call(this, type, data.email, data.phone);
   let user = await User.findOne(query);
   let requestType = this._reqBody.requestType;
   if (!user) {
@@ -433,9 +427,9 @@ var sendDataViaProvider = async function(data, token) {
 };
 var getUser = async function(data, req) {
   let email = data.email || false;
-  let countryCode = data.phone.countryCode || false;
+  let countryCode = this.defaultCountryCode || data.phone.countryCode || false;
   let phone = data.phone || false;
-  let query = getQuery("or", email, phone);
+  let query = getQuery.call(this, "or", email, phone);
   let UserModel = this._UserModel;
   let user = await UserModel.findOne(query);
   if (!user) {
@@ -447,8 +441,8 @@ var getUser = async function(data, req) {
 var getQuery = function(type, email = false, phone = false) {
   let countryCode = false;
 
-  if (phone && phone.countryCode) {
-    countryCode = phone.countryCode;
+  if (phone && phone.phone) {
+    countryCode = this.defaultCountryCode || phone.countryCode;
     phone = phone.phone;
   } else {
     phone = false;
@@ -501,11 +495,11 @@ var defaultCallback = (self, type, email, phone, result, redirect) => async (
     await user.updateAttribute("passwordSetup", true);
   }
   // todo WARN can verify both
-  if (phone && phone.countryCode && email) {
+  if (phone && phone.phone && email) {
     await user.updateAttribute("phoneVerified", true);
     await user.updateAttribute("emailVerified", true);
   } else {
-    if (phone && phone.countryCode && type === "phone") {
+    if (phone && phone.phone && type === "phone") {
       let phoneTmp = user.phone;
       let phonePhoneTmp = _.get(phoneTmp, `phone`, false);
       if (!phonePhoneTmp || phonePhoneTmp !== phone.phone) {
@@ -543,8 +537,10 @@ var createProfile = result => {
     obj.id = obj.email;
     delete result["email"]; //changes
   }
-  if (result.phone && result.phone.countryCode) {
+  if (result.phone && result.phone.phone) {
     obj.phone = result.phone;
+    result.phone.countryCode =
+      this.defaultCountryCode || result.phone.countryCode;
     let ph = [result.phone.countryCode, result.phone.phone].join("");
     if (!obj.username) {
       obj.username = ph;
@@ -643,9 +639,9 @@ Strategy.prototype.verifyToken = async function(
   let Otp = req.app.models[this._modelName];
   let query;
   if (type === "multi") {
-    query = getQuery("and", data.email, data.phone);
+    query = getQuery.call(this, "and", data.email, data.phone);
   } else {
-    query = getQuery("or", data.email, data.phone);
+    query = getQuery.call(this, "or", data.email, data.phone);
   }
   let result = await Otp.findOne(query);
   if (!result) {

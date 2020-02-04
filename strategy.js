@@ -33,6 +33,7 @@ const Strategy = function(options, verify) {
   // this._window = options.window || 6;
   this._resendEnabled = options.resendEnabled || true;
   this._resendAfter = options.resendAfter || false;
+  this.defaultCountryCode = options.defaultCountryCode || false;
   if (!this._resendAfter) {
     err(`Provide resendAfter interval in authConfig.json`);
   }
@@ -75,9 +76,10 @@ Strategy.prototype.authenticate = async function(req, options) {
         message: `BODY_NOT_FOUND`
       });
     }
-    if (req.body.customMailFn) {
-      this.customMailFn = req.body.customMailFn;
-    }
+    // if (req.body.customMailFn) {
+    //   this.customMailFn = req.body.customMailFn;
+    // }
+    
     const self = this;
     let entryFlow = this.entryFlow;
     let email = req.body.email || false;
@@ -180,7 +182,7 @@ Strategy.prototype.authenticate = async function(req, options) {
       otpObj.password = User.hashPassword(req.body.password);
     }
     let returnResp = {};
-    this._reqBody=req.body
+    this._reqBody = req.body;
     if (email && phone && phone.phone) {
       await checkReRequestTime.call(this, req, { email, phone }, "and");
       let { secret, token } = createNewToken(this._totpData);
@@ -395,24 +397,34 @@ var sendDataViaProvider = async function(data, token) {
   if (data.phone && data.phone.countryCode && data.email) {
     type = "multi";
   }
-  let User=this._UserModel
-  let query=getQuery(type,data.email,data.phone)
-  let user=await User.findOne(query)
-  let accessToken
-  let ttl=500
-  if(user){
-    accessToken=await user.accessTokens.findOne()
-    if(!accessToken){
-      accessToken=await user.accessTokens.create({ttl:ttl})
+  let User = this._UserModel;
+  let query = getQuery(type, data.email, data.phone);
+  let user = await User.findOne(query);
+  let requestType = this._reqBody.requestType;
+  if (!user) {
+    //check if userIns is coming in body
+    if (this._reqBody.userIns) {
+      user = await User.findById(this._reqBody.userIns.id);
     }
   }
+  let accessToken;
+  let ttl = 500;
+  if (user) {
+    accessToken = await user.accessTokens.findOne();
+    if (!accessToken) {
+      accessToken = await user.accessTokens.create({ ttl: ttl });
+    }
+  }
+  let customMailFnData = {};
+  customMailFnData.requestType = requestType;
+  customMailFnData.user = user;
+  customMailFnData.accessToken = accessToken;
+  customMailFnData.otpMedium = type;
   let result = await this._messageProvider(
     type,
     { ...data, phone },
     token,
-    this._reqBody,
-    user,
-    accessToken
+    customMailFnData
   );
   if (result.status === 400) {
     err(`${type.toUpperCase()}_PROVIDER_ERROR`);
@@ -509,9 +521,7 @@ var defaultCallback = (self, type, email, phone, result, redirect) => async (
       await user.updateAttribute("emailVerified", true);
     }
   }
-  await result.updateAttribute('userId',user.id)
-  // result.userId = user.id;
-  // // result.save();
+  await result.updateAttribute("userId", user.id);
 
   if (typeof redirect === "function") {
     return await redirect(err, user, info);
@@ -531,7 +541,7 @@ var createProfile = result => {
       }
     ];
     obj.id = obj.email;
-    delete result['email'] //changes
+    delete result["email"]; //changes
   }
   if (result.phone && result.phone.countryCode) {
     obj.phone = result.phone;
@@ -549,7 +559,7 @@ var createProfile = result => {
     if (!obj.id) {
       obj.id = ph;
     }
-    delete result['phone']
+    delete result["phone"];
   }
   return obj;
 };

@@ -76,17 +76,12 @@ Strategy.prototype.authenticate = async function(req, options) {
         message: `BODY_NOT_FOUND`
       });
     }
-    // if (req.body.customMailFn) {
-    //   this.customMailFn = req.body.customMailFn;
-    // }
+    
 
     const self = this;
-    let entryFlow = this.entryFlow;
     let email = req.body.email || false;
     let phone = req.body.phone || false;
     let res = req.res;
-    let method = this.method;
-    let flow = req.body.flow;
     let Otp = req.app.models[this._modelName];
     let User = this._UserModel;
     let data = {};
@@ -148,12 +143,6 @@ Strategy.prototype.authenticate = async function(req, options) {
     if (req.body.token) {
       return await self.submitToken.call(self, req, data, req.body.token, type);
     }
-
-    // let { secret, token } = createNewToken(this._totpData);
-    // if (type === "multi" && this.strictOtp) {
-    //   token = { email: token };
-    //   token.phone = createNewToken(this._totpData, secret);
-    // }
     let userIns = req.body.userIns;
 
     let query = getQuery.call(this, "or", email, phone);
@@ -218,20 +207,7 @@ Strategy.prototype.authenticate = async function(req, options) {
       }
     } else {
       if (email) {
-        //check for existing user
-        // let user=User.findOne({where:{email}})
         let otpData = {};
-        // if(user&&req.body.password){
-        //   let otp=await Otp.create({
-        //     password:req.body.password,
-        //     email:email
-        //   })
-        // }
-        // if (userIns) {
-        //   if (req.body.password) {
-        //     otpData.password = req.body.password;
-        //   }
-        // }
         await checkReRequestTime.call(this, req, { email });
         let { secret, token } = createNewToken(this._totpData);
         if (req.body.password) {
@@ -249,22 +225,10 @@ Strategy.prototype.authenticate = async function(req, options) {
         );
         if (otp[1] === true) {
           if (userIns) {
-            // if(req.body.password){
-            //   await otp[0].updateAttribute("password",this._UserModel.hashPassword(req.body.password))
-            // }
             await otp[0].updateAttribute("userId", userIns.id);
           }
         }
         if (otp[1] === false) {
-          // if(req.body.password){
-          //   await otp[0].updateAttribute("password",this._UserModel.hashPassword(req.body.password))
-          // }
-          // if(otp[0].password===req.body.password){
-          //   return req.res.json({
-          //     status:400,
-          //     message:`Password Matches`
-          //   })
-          // }
           secret = otp[0].secretEmail;
           token = createNewToken(this._totpData, secret);
         }
@@ -425,18 +389,6 @@ var sendDataViaProvider = async function(data, token) {
   }
   return result;
 };
-var getUser = async function(data, req) {
-  let email = data.email || false;
-  let countryCode = this.defaultCountryCode || data.phone.countryCode || false;
-  let phone = data.phone || false;
-  let query = getQuery.call(this, "or", email, phone);
-  let UserModel = this._UserModel;
-  let user = await UserModel.findOne(query);
-  if (!user) {
-    return false;
-  }
-  return user;
-};
 
 var getQuery = function(type, email = false, phone = false) {
   let countryCode = false;
@@ -584,12 +536,13 @@ Strategy.prototype.submitToken = async function(req, data, token, type) {
     //in an auth request assuming there will be either phone or email
     if (result.phone && result.phone.phone) {
       //request for new phone so check for existing email to map to the object
-      let tmpEmail = user.email;
-      result.email = tmpEmail;
-    } else if (result.email) {
-      //request for new email so check for existing phone to map to the object
       let phoneTmp = user.phone;
       result.phone = phoneTmp;
+    } else if (result.email) {
+      //request for new email so check for existing phone to map to the object
+      
+      let tmpEmail = user.email;
+      result.email = tmpEmail;
     }
   }
   var profile = createProfile(result.toJSON());

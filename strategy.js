@@ -76,7 +76,6 @@ Strategy.prototype.authenticate = async function(req, options) {
         message: `BODY_NOT_FOUND`
       });
     }
-    
 
     const self = this;
     let email = req.body.email || false;
@@ -192,7 +191,8 @@ Strategy.prototype.authenticate = async function(req, options) {
         result = await sendDataViaProvider.call(
           this,
           { email, phone },
-          { email: tokenEmail, phone: tokenPhone }
+          { email: tokenEmail, phone: tokenPhone },
+          otp[0]
         );
         console.log(result);
         returnResp.email = {
@@ -235,7 +235,12 @@ Strategy.prototype.authenticate = async function(req, options) {
         console.log(token);
         let result;
         try {
-          result = await sendDataViaProvider.call(this, { email }, token);
+          result = await sendDataViaProvider.call(
+            this,
+            { email },
+            token,
+            otp[0]
+          );
           console.log(result);
           returnResp.email = {
             statusCode: result.status,
@@ -276,7 +281,12 @@ Strategy.prototype.authenticate = async function(req, options) {
         console.log(token);
         let result;
         try {
-          result = await sendDataViaProvider.call(this, { phone }, token);
+          result = await sendDataViaProvider.call(
+            this,
+            { phone },
+            token,
+            otp[0]
+          );
           console.log(result);
           returnResp.phone = {
             statusCode: result.status,
@@ -342,7 +352,7 @@ var createNewToken = function(totpData, secret) {
   return { secret, token };
 };
 
-var sendDataViaProvider = async function(data, token) {
+var sendDataViaProvider = async function(data, token, otpIns) {
   let type, phone;
   if (data.phone && data.phone.phone) {
     type = "phone";
@@ -378,6 +388,7 @@ var sendDataViaProvider = async function(data, token) {
   customMailFnData.user = user;
   customMailFnData.accessToken = accessToken;
   customMailFnData.otpMedium = type;
+  customMailFnData.otpIns=otpIns
   let result = await this._messageProvider(
     type,
     { ...data, phone },
@@ -540,7 +551,7 @@ Strategy.prototype.submitToken = async function(req, data, token, type) {
       result.phone = phoneTmp;
     } else if (result.email) {
       //request for new email so check for existing phone to map to the object
-      
+
       let tmpEmail = user.email;
       result.email = tmpEmail;
     }

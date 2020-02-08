@@ -67,6 +67,10 @@ Strategy.prototype.authenticate = async function(req, options) {
       message: "error occured"
     });
   }
+  req.app.models[this._modelName].belongsTo(this._UserModel, {
+    as: "user",
+    foreignKey: "userId"
+  });
 
   //Request must contain body
   try {
@@ -388,7 +392,7 @@ var sendDataViaProvider = async function(data, token, otpIns) {
   customMailFnData.user = user;
   customMailFnData.accessToken = accessToken;
   customMailFnData.otpMedium = type;
-  customMailFnData.otpIns=otpIns
+  customMailFnData.otpIns = otpIns;
   let result = await this._messageProvider(
     type,
     { ...data, phone },
@@ -446,9 +450,11 @@ var defaultCallback = (self, type, email, phone, result, redirect) => async (
   user,
   info
 ) => {
-  if (err && typeof redirect !== "function") {
+  if (err) {
     return self.error(err);
   }
+  let emailFirstTime = false,
+    phoneFirstTime = false;
   if (!user && typeof redirect !== "function") {
     return self.fail(info);
   }
@@ -459,10 +465,19 @@ var defaultCallback = (self, type, email, phone, result, redirect) => async (
   }
   // todo WARN can verify both
   if (phone && phone.phone && email) {
+    if (!user.phoneVerified) {
+      phoneFirstTime = true;
+    }
+    if (!user.emailVerified) {
+      emailFirstTime = true;
+    }
     await user.updateAttribute("phoneVerified", true);
     await user.updateAttribute("emailVerified", true);
   } else {
     if (phone && phone.phone && type === "phone") {
+      if (!user.phoneVerified) {
+        phoneFirstTime = true;
+      }
       let phoneTmp = user.phone;
       let phonePhoneTmp = _.get(phoneTmp, `phone`, false);
       if (!phonePhoneTmp || phonePhoneTmp !== phone.phone) {
@@ -471,6 +486,9 @@ var defaultCallback = (self, type, email, phone, result, redirect) => async (
       await user.updateAttribute("phoneVerified", true);
     }
     if (email && type === "email") {
+      if (!user.emailVerified) {
+        emailFirstTime = true;
+      }
       let emailTmp = user.email;
       if (!emailTmp || emailTmp !== email) {
         await user.updateAttribute("email", email);
@@ -478,10 +496,10 @@ var defaultCallback = (self, type, email, phone, result, redirect) => async (
       await user.updateAttribute("emailVerified", true);
     }
   }
-  await result.updateAttribute("userId", user.id);
+  await result.updateAttributes({ userId: user.id });
 
   if (typeof redirect === "function") {
-    return await redirect(err, user, info);
+    return await redirect(err, user, info,emailFirstTime,phoneFirstTime);
   } else {
     self.success(user, info);
   }
@@ -528,6 +546,10 @@ Strategy.prototype.submitToken = async function(req, data, token, type) {
   let email = data.email || false;
   let phone = data.phone || false;
   let result = await self.verifyToken(req, data, token, type);
+  let newUser = false;
+  if (!result.userId) {
+    newUser = true;
+  }
   // result = result.toJSON();
   // result.emailVerified = email && true;
   // result.phoneVerified = phone && phone.phone && true;
@@ -536,7 +558,6 @@ Strategy.prototype.submitToken = async function(req, data, token, type) {
   let User = this._UserModel;
   if (result.userId) {
     //this was an authenticated request
-
     let user = await User.findById(result.userId);
     if (!user) {
       return req.res.json({
@@ -559,9 +580,16 @@ Strategy.prototype.submitToken = async function(req, data, token, type) {
   var profile = createProfile(result.toJSON());
   let redirect = this.redirectEnabled || false;
   if (!redirect) {
-    redirect = async function(err, user, info) {
+    redirect = async function(err, user, info,emailFirstTime,phoneFirstTime) {
       if (err) return req.res.json({ err });
+      let ctx={}
+      ctx.user=user,
+      ctx.newUser=newUser
+      ctx.emailFirstTime=emailFirstTime
+      ctx.phoneFirstTime=phoneFirstTime
+      User.emit("after verification", ctx);
       let respObj = user.toJSON();
+
       if (phoneVerReq && emailVerReq) {
         if (user.emailVerified && user.phoneVerified) {
           respObj.accessToken = info.accessToken;

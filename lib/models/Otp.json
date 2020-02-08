@@ -23,6 +23,9 @@
     "secret": {
       "type": "string"
     },
+    "userId": {
+      "type": "string"
+    },
     "attempt": {
       "type": {
         "lastAttempt": "date",
@@ -49,7 +52,7 @@
   "relations": {
     "user": {
       "type": "belongsTo",
-      "model": "User",
+      "model": "user",
       "foreignKey": "userId"
     }
   },

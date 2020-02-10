@@ -683,7 +683,8 @@ Strategy.prototype.verifyToken = async function (
     err(`INVALID_DATA`);
   }
   if (result) {
-    console.log(`IDENTITY_FOUND \n${data}\n${result}`);
+    console.log(`IDENTITY_FOUND \n${JSON.stringify(data)}\n${JSON.stringify(result)}`);
+
   }
   let validToken = false;
   let verifDataOps = this._totpData;
@@ -724,10 +725,12 @@ Strategy.prototype.verifyToken = async function (
       validToken = true;
     }
   } else if (type === "phone") {
+
     phoneSecret = result.secretPhone;
     tokenPhone = tokenEnteredByUser;
     verifDataOps.secret = phoneSecret;
     verifDataOps.token = tokenPhone;
+    console.log(`checking for ${JSON.stringify(verifDataOps)} `)
     let tokenValidates = speakeasy.totp.verify(verifDataOps);
     if (!tokenValidates) {
       validToken = false;

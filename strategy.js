@@ -111,21 +111,28 @@ Strategy.prototype.authenticate = async function (req, options) {
         //password change request
         //validate the token
         //checks are only given for existing email always there
-        let data = {};
-        let userIns = req.body.userIns;
-        data.email = req.body.userIns.email;
-        let token = req.body.token;
-        let result = await this.verifyToken(req, data, token, "email");
-        if (result.userId.toString() === userIns.id) {
-          let user = await User.findById(userIns.id);
-          let accessToken = await user.accessTokens.findOne();
-          await user.setPassword(req.body.password, {
-            accessToken: accessToken
-          });
+        try {
+          let data = {};
+          let userIns = req.body.userIns;
+          data.email = req.body.userIns.email;
+          let token = req.body.token;
+          let result = await this.verifyToken(req, data, token, "email");
+          if (result.userId.toString() === userIns.id) {
+            let user = await User.findById(userIns.id);
+            let accessToken = await user.accessTokens.findOne();
+            await user.setPassword(req.body.password, {
+              accessToken: accessToken
+            });
+            return req.res.json({
+              status: 200,
+              message: user.toJSON()
+            });
+          }
+        } catch (error) {
           return req.res.json({
-            status: 200,
-            message: user.toJSON()
-          });
+            status: 400,
+            message: error.message || error
+          })
         }
       } else {
         phone = { countryCode: false, phone: false };
@@ -176,11 +183,15 @@ Strategy.prototype.authenticate = async function (req, options) {
       let tokenPhone = token;
       let otp;
       async function createOtpInstance(done) {
-        otp = await Otp.findOrCreate(
-          getQuery.call(self, "and", email, phone),
-          otpData
-        );
-        done()
+        try {
+          otp = await Otp.findOrCreate(
+            getQuery.call(self, "and", email, phone),
+            otpData
+          );
+          done()
+        } catch (error) {
+          done(error)
+        }
       }
       User.notifyObserversAround('otp instance', otpData, createOtpInstance, async function (err) {
         if (err) throw err
@@ -233,30 +244,36 @@ Strategy.prototype.authenticate = async function (req, options) {
         otpData.email = email;
         let otp;
         async function createOtpInstance(done) {
-          otp = await Otp.findOrCreate(
-            {
-              where: {
-                email: email
-              }
-            },
-            otpData
-          );
-          done()
+          try {
+            otp = await Otp.findOrCreate(
+              {
+                where: {
+                  email: email
+                }
+              },
+              otpData
+            );
+            done()
+
+          } catch (error) {
+            done(error)
+          }
         }
         User.notifyObserversAround('otp instance', otpData, createOtpInstance, async function (err) {
-          if (err) throw err
-          if (otp[1] === true) {
-            if (userIns) {
-              await otp[0].updateAttribute("userId", userIns.id);
-            }
-          }
-          if (otp[1] === false) {
-            secret = otp[0].secretEmail;
-            token = createNewToken(self._totpData, secret);
-          }
-          console.log(token);
-          let result;
           try {
+            if (err) throw err
+            if (otp[1] === true) {
+              if (userIns) {
+                await otp[0].updateAttribute("userId", userIns.id);
+              }
+            }
+            if (otp[1] === false) {
+              secret = otp[0].secretEmail;
+              token = createNewToken(self._totpData, secret);
+            }
+            console.log(token);
+            let result;
+
             result = await sendDataViaProvider.call(
               self,
               { email },
@@ -291,16 +308,20 @@ Strategy.prototype.authenticate = async function (req, options) {
           otpData.password = User.hashPassword(req.body.password);
         }
         async function createOtpInstance(done) {
-          otp = await Otp.findOrCreate(
-            {
-              where: {
-                "phone.countryCode": phone.countryCode,
-                "phone.phone": phone.phone
-              }
-            },
-            otpData
-          );
-          done()
+          try {
+            otp = await Otp.findOrCreate(
+              {
+                where: {
+                  "phone.countryCode": phone.countryCode,
+                  "phone.phone": phone.phone
+                }
+              },
+              otpData
+            );
+            done()
+          } catch (error) {
+            done(error)
+          }
         }
         User.notifyObserversAround('otp instance', otpData, createOtpInstance, async function (err) {
           if (err) throw err
@@ -342,7 +363,7 @@ Strategy.prototype.authenticate = async function (req, options) {
     console.log(error)
     return req.res.json({
       status: 400,
-      message: error.message
+      message: error.message || error
     });
   }
 };
@@ -748,7 +769,7 @@ Strategy.prototype.verifyToken = async function (
   // );
   // let tokenValidates = speakeasy.totp.verify(verifDataOps);
   if (!validToken) {
-    err(`INVALID_TOKEN`);
+    return Promise.reject(`INVALID_TOKEN`);
   }
   return result;
 };

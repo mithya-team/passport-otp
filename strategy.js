@@ -112,6 +112,13 @@ Strategy.prototype.authenticate = async function (req, options) {
         //validate the token
         //checks are only given for existing email always there
         try {
+          await validate(
+            {
+              options: this.passOptions,
+              pass: req.body.password
+            },
+            "pass"
+          );
           let data = {};
           let userIns = req.body.userIns;
           data.email = req.body.userIns.email;

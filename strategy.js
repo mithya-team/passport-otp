@@ -287,6 +287,9 @@ Strategy.prototype.authenticate = async function (req, options) {
         otpData.phone = phone;
         phone.countryCode = data.phone.countryCode || this.defaultCountryCode
         let otp
+        if (req.body.password) {
+          otpData.password = User.hashPassword(req.body.password);
+        }
         async function createOtpInstance(done) {
           otp = await Otp.findOrCreate(
             {

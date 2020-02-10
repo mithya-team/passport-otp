@@ -492,13 +492,13 @@ var getQuery = function (type, email = false, phone = false) {
     where: {
       or: orArr
     },
-    order: "id DESC"
+    order: "created DESC"
   };
   let queryAnd = {
     where: {
       and: andArr
     },
-    order: "id DESC"
+    order: "created DESC"
   };
 
   if (type === "and") {

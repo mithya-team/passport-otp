@@ -492,13 +492,16 @@ var getQuery = function (type, email = false, phone = false) {
     where: {
       or: orArr
     },
-    order: "created DESC"
+    order: "id DESC",
+    limit:1
   };
   let queryAnd = {
     where: {
       and: andArr
     },
-    order: "created DESC"
+    order: "id DESC",
+    limit:1
+
   };
 
   if (type === "and") {
@@ -712,7 +715,6 @@ Strategy.prototype.verifyToken = async function (
   }
   if (result) {
     console.log(`IDENTITY_FOUND \n${JSON.stringify(data)}\n${JSON.stringify(result)}`);
-
   }
   let validToken = false;
   let verifDataOps = this._totpData;

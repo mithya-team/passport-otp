@@ -10,7 +10,7 @@ var err = err => {
 };
 
 //Strategy Constructor
-const Strategy = function(options, verify) {
+const Strategy = function (options, verify) {
   if (typeof options == "function") {
     verify = options;
     options = {};
@@ -51,15 +51,15 @@ const Strategy = function(options, verify) {
   this.strictOtp = options.strictOtp;
 };
 
-Strategy.prototype.authenticate = async function(req, options) {
+Strategy.prototype.authenticate = async function (req, options) {
   if (!req.app.models[this._modelName]) {
     console.error(
       "Model " +
-        this._modelName +
-        " doesn't exist.\nPossible Solution --------->\n" +
-        "1. Create a model with schema as follow: " +
-        'phone(string), secret(string).\n2. Pass the name of model/collection in the authConfig.json file under the "otp" module configuration as follows:\n' +
-        '```\n"otpModel":"YOUR MODEL NAME"\n```\n'
+      this._modelName +
+      " doesn't exist.\nPossible Solution --------->\n" +
+      "1. Create a model with schema as follow: " +
+      'phone(string), secret(string).\n2. Pass the name of model/collection in the authConfig.json file under the "otp" module configuration as follows:\n' +
+      '```\n"otpModel":"YOUR MODEL NAME"\n```\n'
     );
 
     return req.res.json({
@@ -101,7 +101,7 @@ Strategy.prototype.authenticate = async function(req, options) {
           message: `INVALID_PHONE_DATA`
         });
       }
-      phone.countryCode = this.defaultCountryCode || phone.countryCode;
+      phone.countryCode = phone.countryCode || this.defaultCountryCode;
       await validate([phone.countryCode, phone.phone], "phone");
       data.phone = phone;
     } else {
@@ -174,41 +174,53 @@ Strategy.prototype.authenticate = async function(req, options) {
       otpData.secretPhone = secret;
       otpData.phone = phone;
       let tokenPhone = token;
-      let otp = await Otp.findOrCreate(
-        getQuery.call(this, "and", email, phone),
-        otpData
-      );
-      if (otp[1] === true) {
-        if (userIns) {
-          await otp[0].updateAttribute("userId", userIns.id);
-        }
-      }
-      if (otp[1] === false) {
-        let secretEmail = otp[0].secretEmail;
-        let secretPhone = otp[0].secretPhone;
-        tokenEmail = createNewToken(this._totpData, secretEmail);
-        tokenPhone = createNewToken(this._totpData, secretPhone);
-      }
-      console.log(tokenEmail, tokenPhone);
-      let result;
-      try {
-        result = await sendDataViaProvider.call(
-          this,
-          { email, phone },
-          { email: tokenEmail, phone: tokenPhone },
-          otp[0]
+      let otp;
+      async function createOtpInstance(done) {
+        otp = await Otp.findOrCreate(
+          getQuery.call(self, "and", email, phone),
+          otpData
         );
-        console.log(result);
-        returnResp.email = {
-          statusCode: result.status,
-          message: "TOKEN_SENT"
-        };
-      } catch (error) {
-        returnResp.multi = {
-          status: 500,
-          message: error.message
-        };
+        done()
       }
+      User.notifyObserversAround('otp instance', otpData, createOtpInstance, async function (err) {
+        if (err) throw err
+        if (otp[1] === true) {
+          if (userIns) {
+            await otp[0].updateAttribute("userId", userIns.id);
+          }
+        }
+        if (otp[1] === false) {
+          let secretEmail = otp[0].secretEmail;
+          let secretPhone = otp[0].secretPhone;
+          tokenEmail = createNewToken(self._totpData, secretEmail);
+          tokenPhone = createNewToken(self._totpData, secretPhone);
+        }
+        console.log(tokenEmail, tokenPhone);
+        let result;
+        try {
+          result = await sendDataViaProvider.call(
+            self,
+            { email, phone },
+            { email: tokenEmail, phone: tokenPhone },
+            otp[0]
+          );
+          console.log(result);
+          returnResp.email = {
+            statusCode: result.status,
+            message: "TOKEN_SENT"
+          };
+          return req.res.json(returnResp);
+
+        } catch (error) {
+          returnResp.multi = {
+            status: 500,
+            message: error.message
+          };
+          return req.res.json(returnResp);
+
+        }
+      })
+
     } else {
       if (email) {
         let otpData = {};
@@ -219,43 +231,53 @@ Strategy.prototype.authenticate = async function(req, options) {
         }
         otpData.secretEmail = secret;
         otpData.email = email;
-        let otp = await Otp.findOrCreate(
-          {
-            where: {
-              email: email
-            }
-          },
-          otpData
-        );
-        if (otp[1] === true) {
-          if (userIns) {
-            await otp[0].updateAttribute("userId", userIns.id);
-          }
-        }
-        if (otp[1] === false) {
-          secret = otp[0].secretEmail;
-          token = createNewToken(this._totpData, secret);
-        }
-        console.log(token);
-        let result;
-        try {
-          result = await sendDataViaProvider.call(
-            this,
-            { email },
-            token,
-            otp[0]
+        let otp;
+        async function createOtpInstance(done) {
+          otp = await Otp.findOrCreate(
+            {
+              where: {
+                email: email
+              }
+            },
+            otpData
           );
-          console.log(result);
-          returnResp.email = {
-            statusCode: result.status,
-            message: "TOKEN_SENT"
-          };
-        } catch (error) {
-          returnResp.email = {
-            status: 500,
-            message: error.message
-          };
+          done()
         }
+        User.notifyObserversAround('otp instance', otpData, createOtpInstance, async function (err) {
+          if (err) throw err
+          if (otp[1] === true) {
+            if (userIns) {
+              await otp[0].updateAttribute("userId", userIns.id);
+            }
+          }
+          if (otp[1] === false) {
+            secret = otp[0].secretEmail;
+            token = createNewToken(self._totpData, secret);
+          }
+          console.log(token);
+          let result;
+          try {
+            result = await sendDataViaProvider.call(
+              self,
+              { email },
+              token,
+              otp[0]
+            );
+            console.log(result);
+            returnResp.email = {
+              statusCode: result.status,
+              message: "TOKEN_SENT"
+            };
+            return req.res.json(returnResp);
+          } catch (error) {
+            returnResp.email = {
+              status: 500,
+              message: error.message
+            };
+            return req.res.json(returnResp);
+          }
+        })
+
       }
       if (phone && phone.phone) {
         await checkReRequestTime.call(this, req, { phone });
@@ -263,49 +285,58 @@ Strategy.prototype.authenticate = async function(req, options) {
         let otpData = {};
         otpData.secretPhone = secret;
         otpData.phone = phone;
-        phone.countryCode = this.defaultCountryCode || phone.countryCode;
-        let otp = await Otp.findOrCreate(
-          {
-            where: {
-              "phone.countryCode": phone.countryCode,
-              "phone.phone": phone.phone
-            }
-          },
-          otpData
-        );
-        if (otp[1] === true) {
-          if (userIns) {
-            await otp[0].updateAttribute("userId", userIns.id);
-          }
-        }
-        if (otp[1] === false) {
-          secret = otp[0].secretPhone;
-          token = createNewToken(this._totpData, secret);
-        }
-        console.log(token);
-        let result;
-        try {
-          result = await sendDataViaProvider.call(
-            this,
-            { phone },
-            token,
-            otp[0]
+        phone.countryCode = data.phone.countryCode || this.defaultCountryCode
+        let otp
+        async function createOtpInstance(done) {
+          otp = await Otp.findOrCreate(
+            {
+              where: {
+                "phone.countryCode": phone.countryCode,
+                "phone.phone": phone.phone
+              }
+            },
+            otpData
           );
-          console.log(result);
-          returnResp.phone = {
-            statusCode: result.status,
-            message: "TOKEN_SENT"
-          };
-        } catch (error) {
-          returnResp.phone = {
-            status: 500,
-            message: error.message
-          };
+          done()
         }
+        User.notifyObserversAround('otp instance', otpData, createOtpInstance, async function (err) {
+          if (err) throw err
+          if (otp[1] === true) {
+            if (userIns) {
+              await otp[0].updateAttribute("userId", userIns.id);
+            }
+          }
+          if (otp[1] === false) {
+            secret = otp[0].secretPhone;
+            token = createNewToken(self._totpData, secret);
+          }
+          console.log(token);
+          let result;
+          try {
+            result = await sendDataViaProvider.call(
+              self,
+              { phone },
+              token,
+              otp[0]
+            );
+            console.log(result);
+            returnResp.phone = {
+              statusCode: result.status,
+              message: "TOKEN_SENT"
+            };
+            return req.res.json(returnResp);
+          } catch (error) {
+            returnResp.phone = {
+              status: 500,
+              message: error.message
+            };
+            return req.res.json(returnResp);
+          }
+        })
       }
     }
-    return req.res.json(returnResp);
   } catch (error) {
+    console.log(error)
     return req.res.json({
       status: 400,
       message: error.message
@@ -313,7 +344,7 @@ Strategy.prototype.authenticate = async function(req, options) {
   }
 };
 
-var checkReRequestTime = async function(req, data, qFrmt) {
+var checkReRequestTime = async function (req, data, qFrmt) {
   qFrmt = qFrmt || "or";
   let Otp = req.app.models[this._modelName];
   var result = await Otp.findOne(
@@ -339,7 +370,7 @@ var checkReRequestTime = async function(req, data, qFrmt) {
   });
   return true;
 };
-var createNewToken = function(totpData, secret) {
+var createNewToken = function (totpData, secret) {
   let old = secret && true;
   secret = secret || speakeasy.generateSecret().base32;
   let token = speakeasy.totp(
@@ -356,11 +387,11 @@ var createNewToken = function(totpData, secret) {
   return { secret, token };
 };
 
-var sendDataViaProvider = async function(data, token, otpIns) {
+var sendDataViaProvider = async function (data, token, otpIns) {
   let type, phone;
   if (data.phone && data.phone.phone) {
     type = "phone";
-    data.phone.countryCode = this.defaultCountryCode || data.phone.countryCode;
+    data.phone.countryCode = data.phone.countryCode || this.defaultCountryCode
     phone = [data.phone.countryCode, data.phone.phone].join("");
   }
   if (data.email) {
@@ -405,11 +436,11 @@ var sendDataViaProvider = async function(data, token, otpIns) {
   return result;
 };
 
-var getQuery = function(type, email = false, phone = false) {
+var getQuery = function (type, email = false, phone = false) {
   let countryCode = false;
 
   if (phone && phone.phone) {
-    countryCode = this.defaultCountryCode || phone.countryCode;
+    countryCode = phone.countryCode || this.defaultCountryCode
     phone = phone.phone;
   } else {
     phone = false;
@@ -499,7 +530,7 @@ var defaultCallback = (self, type, email, phone, result, redirect) => async (
   await result.updateAttributes({ userId: user.id });
 
   if (typeof redirect === "function") {
-    return await redirect(err, user, info,emailFirstTime,phoneFirstTime);
+    return await redirect(err, user, info, emailFirstTime, phoneFirstTime);
   } else {
     self.success(user, info);
   }
@@ -521,7 +552,7 @@ var createProfile = result => {
   if (result.phone && result.phone.phone) {
     obj.phone = result.phone;
     result.phone.countryCode =
-      this.defaultCountryCode || result.phone.countryCode;
+      result.phone.countryCode || this.defaultCountryCode
     let ph = [result.phone.countryCode, result.phone.phone].join("");
     if (!obj.username) {
       obj.username = ph;
@@ -541,7 +572,7 @@ var createProfile = result => {
   return obj;
 };
 
-Strategy.prototype.submitToken = async function(req, data, token, type) {
+Strategy.prototype.submitToken = async function (req, data, token, type) {
   const self = this;
   let email = data.email || false;
   let phone = data.phone || false;
@@ -580,14 +611,23 @@ Strategy.prototype.submitToken = async function(req, data, token, type) {
   var profile = createProfile(result.toJSON());
   let redirect = this.redirectEnabled || false;
   if (!redirect) {
-    redirect = async function(err, user, info,emailFirstTime,phoneFirstTime) {
+    redirect = async function (err, user, info, emailFirstTime, phoneFirstTime) {
       if (err) return req.res.json({ err });
-      let ctx={}
-      ctx.user=user,
-      ctx.newUser=newUser
-      ctx.emailFirstTime=emailFirstTime
-      ctx.phoneFirstTime=phoneFirstTime
-      User.emit("after verification", ctx);
+      let ctx = {}
+      ctx.user = user,
+        ctx.newUser = newUser
+      ctx.emailFirstTime = emailFirstTime
+      ctx.phoneFirstTime = phoneFirstTime
+      ctx.extras = req.body.extras
+      await new Promise((resolve, reject) => {
+        User.notifyObserversOf("after verification", ctx, function (err) {
+          if (err) reject(err)
+          resolve()
+        });
+      });
+      // p.then(resp => {
+
+      // }).catch(e => console.log(e))
       let respObj = user.toJSON();
 
       if (phoneVerReq && emailVerReq) {
@@ -622,7 +662,7 @@ Strategy.prototype.submitToken = async function(req, data, token, type) {
   );
 };
 
-Strategy.prototype.verifyToken = async function(
+Strategy.prototype.verifyToken = async function (
   req,
   data,
   tokenEnteredByUser,

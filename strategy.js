@@ -581,7 +581,6 @@ var defaultCallback = (self, type, email, phone, result, redirect) => async (
     return self.error(err);
   }
   user.updateAttributes({ username: _.get(info, `identity.profile.username`) })
-  await user.accessTokens.create(info.accessToken)
   let emailFirstTime = false,
     phoneFirstTime = false;
   if (!user && typeof redirect !== "function") {

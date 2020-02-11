@@ -613,6 +613,7 @@ var defaultCallback = (self, type, email, phone, result, redirect) => async (
         await user.updateAttribute("phone", phone);
       }
       await user.updateAttribute("phoneVerified", true);
+      await user.updateAttribute("phoneSetup", true);
     }
     if (email && type === "email") {
       if (!user.emailVerified) {
@@ -623,6 +624,7 @@ var defaultCallback = (self, type, email, phone, result, redirect) => async (
         await user.updateAttribute("email", email);
       }
       await user.updateAttribute("emailVerified", true);
+      await user.updateAttribute("emailSetup", true);
     }
   }
   await result.updateAttributes({ userId: user.id });

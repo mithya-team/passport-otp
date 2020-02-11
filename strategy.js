@@ -63,7 +63,7 @@ Strategy.prototype.authenticate = async function (req, options) {
     );
 
     return req.res.json({
-      statusCode: 400,
+      status: 400,
       message: "error occured"
     });
   }
@@ -121,19 +121,63 @@ Strategy.prototype.authenticate = async function (req, options) {
           );
           let data = {};
           let userIns = req.body.userIns;
+          // verifyToken method accepts either email, phone, or multi 
+          // in `passwordUpdate` case token can be either phone's or email
+          // therefore checking for both email and phone according to the availibility
+          // Assuming that this endpoint is recieving only single token
           data.email = req.body.userIns.email;
-          let token = req.body.token;
-          let result = await this.verifyToken(req, data, token, "email");
-          if (result.userId.toString() === userIns.id) {
-            let user = await User.findById(userIns.id);
-            let accessToken = await user.accessTokens.findOne();
-            await user.setPassword(req.body.password, {
-              accessToken: accessToken
-            });
-            return req.res.json({
-              status: 200,
-              message: user.toJSON()
-            });
+          data.phone = req.body.userIns.phone.phone && req.body.userIns.phone
+          let resultEmail;
+          let errObj = {};
+          if (data.email) {
+            //check for email
+            let token = req.body.token;
+            try {
+              resultEmail = await this.verifyToken(req, data, token, "email")
+            } catch (error) {
+              errObj.email = error.message || error
+              resultEmail = false
+            }
+          }
+          let resultPhone;
+          if (data.phone) {
+            //check for email
+            let token = req.body.token;
+            try {
+              resultPhone = await this.verifyToken(req, data, token, "phone")
+            } catch (error) {
+              errObj.phone = error.message || error
+              resultPhone = false
+            }
+          }
+
+          // let token = req.body.token;
+          // let result = await this.verifyToken(req, data, token, "email");
+          if (resultEmail || resultPhone) {
+            let result = resultEmail || resultPhone
+            if (result.userId.toString() === userIns.id) {
+              let user = await User.findById(userIns.id);
+              let incomingAccessToken = req.body.extras.options && req.body.extras.options.accessToken
+              if (!incomingAccessToken) {
+                [incomingAccessToken] = await user.accessTokens.find({ limit: 1, order: "id DESC" });
+              }
+              await user.setPassword(req.body.password, {
+                accessToken: incomingAccessToken
+              });
+              return req.res.json({
+                status: 200,
+                message: user.toJSON()
+              });
+            }
+            else {
+              console.log(`Invalid userId`)
+              err(`Invalid userId`)
+            }
+          }
+          else {
+            if (errObj) {
+              throw errObj
+            }
           }
         } catch (error) {
           return req.res.json({
@@ -224,7 +268,7 @@ Strategy.prototype.authenticate = async function (req, options) {
           );
           console.log(result);
           returnResp.email = {
-            statusCode: result.status,
+            status: result.status,
             message: "TOKEN_SENT"
           };
           return req.res.json(returnResp);
@@ -291,7 +335,7 @@ Strategy.prototype.authenticate = async function (req, options) {
             );
             console.log(result);
             returnResp.email = {
-              statusCode: result.status,
+              status: result.status,
               message: "TOKEN_SENT"
             };
             return req.res.json(returnResp);
@@ -356,7 +400,7 @@ Strategy.prototype.authenticate = async function (req, options) {
             );
             console.log(result);
             returnResp.phone = {
-              statusCode: result.status,
+              status: result.status,
               message: "TOKEN_SENT"
             };
             return req.res.json(returnResp);

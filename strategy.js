@@ -782,8 +782,11 @@ Strategy.prototype.verifyToken = async function (
   let query;
   if (type === "multi") {
     query = getQuery.call(this, "and", data.email, data.phone);
-  } else {
-    query = getQuery.call(this, "or", data.email, data.phone);
+  } else if(type==="phone"){
+    query = getQuery.call(this, "or", null, data.phone);
+  }
+  else if(type==="email"){
+    query = getQuery.call(this, "or", data.email, null);
   }
   let result = await Otp.findOne(query);
   if (!result) {

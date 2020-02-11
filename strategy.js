@@ -9,11 +9,11 @@ var err = err => {
   throw new Error(err);
 };
 function makeid(length) {
-  var result           = '';
-  var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  var result = '';
+  var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   var charactersLength = characters.length;
-  for ( var i = 0; i < length; i++ ) {
-     result += characters.charAt(Math.floor(Math.random() * charactersLength));
+  for (var i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
   }
   return result;
 }
@@ -337,6 +337,7 @@ Strategy.prototype.authenticate = async function (req, options) {
               token = createNewToken(self._totpData, secret);
             }
             console.log(token);
+            User.emit('generatedToken', token)
             let result;
 
             result = await sendDataViaProvider.call(
@@ -402,6 +403,7 @@ Strategy.prototype.authenticate = async function (req, options) {
             token = createNewToken(self._totpData, secret);
           }
           console.log(token);
+          User.emit('generatedToken', token)
           let result;
           try {
             result = await sendDataViaProvider.call(
@@ -578,7 +580,7 @@ var defaultCallback = (self, type, email, phone, result, redirect) => async (
   if (err) {
     return self.error(err);
   }
-  user.updateAttributes({username:_.get(info,`identity.profile.username`)})
+  user.updateAttributes({ username: _.get(info, `identity.profile.username`) })
   await user.accessTokens.create(info.accessToken)
   let emailFirstTime = false,
     phoneFirstTime = false;
@@ -632,7 +634,7 @@ var defaultCallback = (self, type, email, phone, result, redirect) => async (
   }
 };
 
-var createProfile = async function(result) {
+var createProfile = async function (result) {
   // if existing user
   let user, userIdentity, externalId;
   if (result.userId) {
@@ -715,7 +717,7 @@ Strategy.prototype.submitToken = async function (req, data, token, type) {
       result.email = tmpEmail;
     }
   }
-  var profile = await createProfile.call(this,result);
+  var profile = await createProfile.call(this, result);
   let redirect = this.redirectEnabled || false;
   if (!redirect) {
     redirect = async function (err, user, info, emailFirstTime, phoneFirstTime) {

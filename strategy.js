@@ -8,7 +8,15 @@ var moment = require("moment");
 var err = err => {
   throw new Error(err);
 };
-
+function makeid(length) {
+  var result           = '';
+  var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  var charactersLength = characters.length;
+  for ( var i = 0; i < length; i++ ) {
+     result += characters.charAt(Math.floor(Math.random() * charactersLength));
+  }
+  return result;
+}
 //Strategy Constructor
 const Strategy = function (options, verify) {
   if (typeof options == "function") {
@@ -49,6 +57,7 @@ const Strategy = function (options, verify) {
   this._UserModel = options.UserModel;
   this.redirectEnabled = options.redirectEnabled || false;
   this.strictOtp = options.strictOtp;
+  this.provider = options.provider
 };
 
 Strategy.prototype.authenticate = async function (req, options) {
@@ -320,6 +329,7 @@ Strategy.prototype.authenticate = async function (req, options) {
             if (otp[1] === true) {
               if (userIns) {
                 await otp[0].updateAttribute("userId", userIns.id);
+                otp[0].user(userIns)
               }
             }
             if (otp[1] === false) {
@@ -568,6 +578,8 @@ var defaultCallback = (self, type, email, phone, result, redirect) => async (
   if (err) {
     return self.error(err);
   }
+  user.updateAttributes({username:_.get(info,`identity.profile.username`)})
+  await user.accessTokens.create(info.accessToken)
   let emailFirstTime = false,
     phoneFirstTime = false;
   if (!user && typeof redirect !== "function") {
@@ -620,7 +632,14 @@ var defaultCallback = (self, type, email, phone, result, redirect) => async (
   }
 };
 
-var createProfile = result => {
+var createProfile = async function(result) {
+  // if existing user
+  let user, userIdentity, externalId;
+  if (result.userId) {
+    user = await result.user.get()
+    userIdentity = (await user.identities.getAsync()).map(i => { if (i.provider === this.provider) return i })
+    externalId = userIdentity[0].externalId
+  }
   let obj = {};
   if (result.email) {
     obj.email = result.email;
@@ -630,7 +649,7 @@ var createProfile = result => {
         value: obj.email
       }
     ];
-    obj.id = obj.email;
+    obj.id = externalId || obj.email;
     delete result["email"]; //changes
   }
   if (result.phone && result.phone.phone) {
@@ -644,12 +663,13 @@ var createProfile = result => {
     if (!obj.emails) {
       obj.emails = [
         {
-          value: ph + `@passport-otp.com`
+          value: obj.email || ph + `@passport-otp.com`
+          //     if email comes with otpInstance
         }
       ];
     }
     if (!obj.id) {
-      obj.id = ph;
+      obj.id = externalId || ph;
     }
     delete result["phone"];
   }
@@ -680,19 +700,22 @@ Strategy.prototype.submitToken = async function (req, data, token, type) {
         message: "userId not found"
       });
     }
-    //in an auth request assuming there will be either phone or email
-    if (result.phone && result.phone.phone) {
-      //request for new phone so check for existing email to map to the object
+    // Assuming that the fields which are coming in an result(OTP) instance
+    // contains the latest information
+    // If not (email || phone) update respected to existing user value
+    // There might arrive an issue in which an OTP instance will contain both
+    // email and phone field .... // todo make sure single update stores in OTP instance
+    if (!_.get(result, `phone.phone`, false)) {
       let phoneTmp = user.phone;
       result.phone = phoneTmp;
-    } else if (result.email) {
-      //request for new email so check for existing phone to map to the object
+    }
+    if (!result.email) {
 
       let tmpEmail = user.email;
       result.email = tmpEmail;
     }
   }
-  var profile = createProfile(result.toJSON());
+  var profile = await createProfile.call(this,result);
   let redirect = this.redirectEnabled || false;
   if (!redirect) {
     redirect = async function (err, user, info, emailFirstTime, phoneFirstTime) {

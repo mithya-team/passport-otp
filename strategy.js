@@ -256,7 +256,9 @@ Strategy.prototype.authenticate = async function (req, options) {
               {
                 where: {
                   email: email
-                }
+                },
+                limit: 1,
+                order: "id DESC"
               },
               otpData
             );
@@ -321,7 +323,9 @@ Strategy.prototype.authenticate = async function (req, options) {
                 where: {
                   "phone.countryCode": phone.countryCode,
                   "phone.phone": phone.phone
-                }
+                },
+                limit: 1,
+                order: "id DESC"
               },
               otpData
             );
@@ -493,14 +497,14 @@ var getQuery = function (type, email = false, phone = false) {
       or: orArr
     },
     order: "id DESC",
-    limit:1
+    limit: 1
   };
   let queryAnd = {
     where: {
       and: andArr
     },
     order: "id DESC",
-    limit:1
+    limit: 1
 
   };
 

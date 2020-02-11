@@ -164,6 +164,8 @@ Strategy.prototype.authenticate = async function (req, options) {
               await user.setPassword(req.body.password, {
                 accessToken: incomingAccessToken
               });
+              await user.updateAttributes({ passwordSetup: true })
+              //todo pass
               return req.res.json({
                 status: 200,
                 message: user.toJSON()

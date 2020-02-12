@@ -451,9 +451,16 @@ var checkReRequestTime = async function ( req, data, qFrmt ) {
 		return true;
 	}
 	let timeDiff = moment().diff( lastAttempt, "seconds" );
+	let remSecs = this._resendAfter * 60 - timeDiff;
 	if ( timeDiff < this._resendAfter * 60 ) {
-		err(
-			`You can resend OTP after ${ this._resendAfter * 60 - timeDiff } seconds`
+		return Promise.reject(
+			{
+				status: 401,
+				message: {
+					details: `You can resend OTP after ${ remSecs } seconds`,
+					timeStamp: moment( moment.now() ).add( remSecs, 'seconds' ).toISOString()
+				}
+			}
 		);
 	}
 	let nAttempts = _.get( result, `attempt.attempts`, 0 );

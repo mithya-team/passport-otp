@@ -72,7 +72,7 @@ Strategy.prototype.authenticate = async function ( req, options ) {
 		);
 
 		return req.res.json( {
-			status: 400,
+			statusCode: 400,
 			message: "error occured"
 		} );
 	}
@@ -85,7 +85,7 @@ Strategy.prototype.authenticate = async function ( req, options ) {
 	try {
 		if ( !req.body ) {
 			return req.res.json( {
-				status: 400,
+				statusCode: 400,
 				message: `BODY_NOT_FOUND`
 			} );
 		}
@@ -106,7 +106,7 @@ Strategy.prototype.authenticate = async function ( req, options ) {
 			if ( !phone.countryCode || !phone.phone ) {
 				// && instead of || ??
 				return res.json( {
-					status: 400,
+					statusCode: 400,
 					message: `INVALID_PHONE_DATA`
 				} );
 			}
@@ -176,7 +176,7 @@ Strategy.prototype.authenticate = async function ( req, options ) {
 							await user.updateAttributes( { passwordSetup: true } );
 							//todo pass
 							return req.res.json( {
-								status: 200,
+								statusCode: 200,
 								message: user.toJSON()
 							} );
 						}
@@ -192,7 +192,7 @@ Strategy.prototype.authenticate = async function ( req, options ) {
 					}
 				} catch ( error ) {
 					return req.res.json( {
-						status: 400,
+						statusCode: 400,
 						message: error.message || error
 					} );
 				}
@@ -279,14 +279,14 @@ Strategy.prototype.authenticate = async function ( req, options ) {
 					);
 					console.log( result );
 					returnResp.email = {
-						status: result.status,
+						statusCode: result.statusCode,
 						message: "TOKEN_SENT"
 					};
 					return req.res.json( returnResp );
 
 				} catch ( error ) {
 					returnResp.multi = {
-						status: 500,
+						statusCode: 500,
 						message: error.message
 					};
 					return req.res.json( returnResp );
@@ -348,13 +348,13 @@ Strategy.prototype.authenticate = async function ( req, options ) {
 						);
 						console.log( result );
 						returnResp.email = {
-							status: result.status,
+							statusCode: result.statusCode,
 							message: "TOKEN_SENT"
 						};
 						return req.res.json( returnResp );
 					} catch ( error ) {
 						returnResp.email = {
-							status: 500,
+							statusCode: 500,
 							message: error.message
 						};
 						return req.res.json( returnResp );
@@ -414,13 +414,13 @@ Strategy.prototype.authenticate = async function ( req, options ) {
 						);
 						console.log( result );
 						returnResp.phone = {
-							status: result.status,
+							statusCode: result.statusCode,
 							message: "TOKEN_SENT"
 						};
 						return req.res.json( returnResp );
 					} catch ( error ) {
 						returnResp.phone = {
-							status: 500,
+							statusCode: 500,
 							message: error.message
 						};
 						return req.res.json( returnResp );
@@ -431,7 +431,7 @@ Strategy.prototype.authenticate = async function ( req, options ) {
 	} catch ( error ) {
 		console.log( error );
 		return req.res.json( {
-			status: 400,
+			statusCode: 400,
 			message: error.message || error
 		} );
 	}
@@ -455,7 +455,7 @@ var checkReRequestTime = async function ( req, data, qFrmt ) {
 	if ( timeDiff < this._resendAfter * 60 ) {
 		return Promise.reject(
 			{
-				status: 401,
+				statusCode: 401,
 				message: {
 					details: `You can resend OTP after ${ remSecs } seconds`,
 					timeStamp: moment( moment.now() ).add( remSecs, 'seconds' ).toISOString()
@@ -530,7 +530,7 @@ var sendDataViaProvider = async function ( data, token, otpIns ) {
 		token,
 		customMailFnData
 	);
-	if ( result.status === 400 ) {
+	if ( result.statusCode === 400 ) {
 		err( `${ type.toUpperCase() }_PROVIDER_ERROR` );
 	}
 	return result;
@@ -709,7 +709,7 @@ Strategy.prototype.submitToken = async function ( req, data, token, type ) {
 		let user = await User.findById( result.userId );
 		if ( !user ) {
 			return req.res.json( {
-				status: 400,
+				statusCode: 400,
 				message: "userId not found"
 			} );
 		}
@@ -769,7 +769,7 @@ Strategy.prototype.submitToken = async function ( req, data, token, type ) {
 				} );
 			}
 			return req.res.json( {
-				status: 200,
+				statusCode: 200,
 				...respObj
 			} );
 		};

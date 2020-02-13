@@ -38,7 +38,7 @@ const Strategy = function ( options, verify ) {
 		this.entryFlow = true;
 	}
 	this.passOptions = options.passOptions || false;
-	// this._window = options.window || 6;
+	this._window = options.window || 4;
 	this._resendEnabled = options.resendEnabled || true;
 	this._resendAfter = options.resendAfter || false;
 	this.defaultCountryCode = options.defaultCountryCode || false;
@@ -51,7 +51,7 @@ const Strategy = function ( options, verify ) {
 	this._verificationRequired = options.verificationRequired && true;
 	this._totpData = {
 		encoding: "base32",
-		window: 4,
+		window: this._window,
 		digits: this._otpDigits
 	};
 	this._UserModel = options.UserModel;

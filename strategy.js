@@ -3,8 +3,9 @@ const passport = require( "passport-strategy" );
 var speakeasy = require( "speakeasy" );
 var _ = require( "lodash" );
 var validate = require( "./lib/util" ).validate;
-var bcrypt = require( "bcrypt" );
 var moment = require( "moment" );
+let { STATUS_CODES } = require( 'status-codes' );
+var HTTP_STATUS_CODES = require( 'http-status-codes' );
 var err = err => {
 	throw new Error( err );
 };
@@ -72,8 +73,8 @@ Strategy.prototype.authenticate = async function ( req, options ) {
 		);
 
 		return req.res.json( {
-			statusCode: 400,
-			message: "error occured"
+			statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
+			responseCode: STATUS_CODES.AUTH.MODEL_NOT_FOUND
 		} );
 	}
 	req.app.models[ this._modelName ].belongsTo( this._UserModel, {
@@ -85,8 +86,8 @@ Strategy.prototype.authenticate = async function ( req, options ) {
 	try {
 		if ( !req.body ) {
 			return req.res.json( {
-				statusCode: 400,
-				message: `BODY_NOT_FOUND`
+				statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
+				responseCode: STATUS_CODES.AUTH.BODY_NOT_FOUND
 			} );
 		}
 
@@ -106,8 +107,8 @@ Strategy.prototype.authenticate = async function ( req, options ) {
 			if ( !phone.countryCode || !phone.phone ) {
 				// && instead of || ??
 				return res.json( {
-					statusCode: 400,
-					message: `INVALID_PHONE_DATA`
+					statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
+					responseCode: STATUS_CODES.AUTH.INVALID_PHONE_DATA
 				} );
 			}
 			phone.countryCode = phone.countryCode || this.defaultCountryCode;
@@ -115,7 +116,12 @@ Strategy.prototype.authenticate = async function ( req, options ) {
 			data.phone = phone;
 		} else {
 			//.....
-			if ( !email && !req.body.password ) err( `PROVIDE_EMAIL_OR_PHONE` );
+			if ( !email && !req.body.password ) {
+				return Promise.reject( {
+					statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
+					responseCode: STATUS_CODES.AUTH.DATA_NOT_FOUND
+				} );
+			}
 			if ( req.body.password && req.body.userIns && req.body.token ) {
 				//password change request
 				//validate the token
@@ -182,7 +188,10 @@ Strategy.prototype.authenticate = async function ( req, options ) {
 						}
 						else {
 							console.log( `Invalid userId` );
-							err( `Invalid userId` );
+							return Promise.reject( {
+								statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
+								responseCode: STATUS_CODES.AUTH.USER_NOT_FOUND
+							} );
 						}
 					}
 					else {
@@ -279,14 +288,14 @@ Strategy.prototype.authenticate = async function ( req, options ) {
 					);
 					console.log( result );
 					returnResp.email = {
-						statusCode: result.statusCode,
-						message: "TOKEN_SENT"
+						statusCode: HTTP_STATUS_CODES.ACCEPTED,
+						responseCode: STATUS_CODES.AUTH.OTP_SENT
 					};
 					return req.res.json( returnResp );
 
 				} catch ( error ) {
 					returnResp.multi = {
-						statusCode: 500,
+						statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
 						message: error.message
 					};
 					return req.res.json( returnResp );
@@ -349,7 +358,7 @@ Strategy.prototype.authenticate = async function ( req, options ) {
 						console.log( result );
 						returnResp.email = {
 							statusCode: result.statusCode,
-							message: "TOKEN_SENT"
+							responseCode: STATUS_CODES.AUTH.OTP_SENT
 						};
 						return req.res.json( returnResp );
 					} catch ( error ) {
@@ -415,7 +424,7 @@ Strategy.prototype.authenticate = async function ( req, options ) {
 						console.log( result );
 						returnResp.phone = {
 							statusCode: result.statusCode,
-							message: "TOKEN_SENT"
+							responseCode: STATUS_CODES.AUTH.OTP_SENT
 						};
 						return req.res.json( returnResp );
 					} catch ( error ) {
@@ -431,7 +440,7 @@ Strategy.prototype.authenticate = async function ( req, options ) {
 	} catch ( error ) {
 		console.log( error );
 		return req.res.json( {
-			statusCode: 400,
+			statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
 			message: error.message || error
 		} );
 	}
@@ -455,11 +464,9 @@ var checkReRequestTime = async function ( req, data, qFrmt ) {
 	if ( timeDiff < this._resendAfter * 60 ) {
 		return Promise.reject(
 			{
-				statusCode: 401,
-				message: {
-					details: `You can resend OTP after ${ remSecs } seconds`,
-					timeStamp: moment( moment.now() ).add( remSecs, 'seconds' ).toISOString()
-				}
+				statusCode: HTTP_STATUS_CODES.ACCEPTED,
+				responseCode: STATUS_CODES.AUTH.CANNOT_SEND_OTP,
+				timeStamp: moment( moment.now() ).add( remSecs, 'seconds' ).toISOString()
 			}
 		);
 	}
@@ -531,7 +538,11 @@ var sendDataViaProvider = async function ( data, token, otpIns ) {
 		customMailFnData
 	);
 	if ( result.statusCode === 400 ) {
-		err( `${ type.toUpperCase() }_PROVIDER_ERROR` );
+		let errCode = ( type === 'email' && STATUS_CODES.AUTH.EMAIL_PROVIDER_ERROR ) || STATUS_CODES.AUTH.PHONE_PROVIDER_ERROR;
+		return Promise.reject( {
+			statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
+			responseCode: errCode,
+		} );
 	}
 	return result;
 };
@@ -709,8 +720,8 @@ Strategy.prototype.submitToken = async function ( req, data, token, type ) {
 		let user = await User.findById( result.userId );
 		if ( !user ) {
 			return req.res.json( {
-				statusCode: 400,
-				message: "userId not found"
+				statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
+				responseCode: STATUS_CODES.AUTH.USER_NOT_FOUND
 			} );
 		}
 		// Assuming that the fields which are coming in an result(OTP) instance
@@ -801,7 +812,10 @@ Strategy.prototype.verifyToken = async function (
 	}
 	let result = await Otp.findOne( query );
 	if ( !result ) {
-		err( `INVALID_DATA` );
+		return Promise.reject( {
+			statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
+			responseCode: STATUS_CODES.AUTH.INVALID_DATA
+		} );
 	}
 	if ( result ) {
 		console.log( `IDENTITY_FOUND \n${ JSON.stringify( data ) }\n${ JSON.stringify( result ) }` );
@@ -858,17 +872,12 @@ Strategy.prototype.verifyToken = async function (
 			validToken = true;
 		}
 	}
-
-	// _.defaults(
-	//   {
-	//     secret: result.secret,
-	//     token: tokenEnteredByUser
-	//   },
-	//   this._totpData
-	// );
-	// let tokenValidates = speakeasy.totp.verify(verifDataOps);
 	if ( !validToken ) {
-		return Promise.reject( `INVALID_TOKEN` );
+		return Promise.reject( {
+			statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
+			responseCode: STATUS_CODES.AUTH.INVALID_TOKEN
+		} );
+
 	}
 	return result;
 };

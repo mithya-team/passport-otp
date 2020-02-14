@@ -22,12 +22,14 @@
   "homepage": "https://github.com/saurabhg22/passport-otp#readme",
   "dependencies": {
     "bcrypt": "^3.0.7",
+    "http-status-codes": "^1.4.0",
     "lodash": "^4.17.15",
     "loopback": "^3.26.0",
     "moment": "^2.24.0",
     "nodemailer": "^6.4.2",
     "passport-strategy": "^1.0.0",
     "speakeasy": "^2.0.0",
+    "status-codes": "git+ssh://git-codecommit.ap-southeast-1.amazonaws.com/v1/repos/status-codes",
     "twilio": "^3.39.1"
   },
   "devDependencies": {

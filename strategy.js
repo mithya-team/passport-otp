@@ -7,7 +7,11 @@ var moment = require( "moment" );
 let { STATUS_CODES } = require( 'status-codes' );
 var HTTP_STATUS_CODES = require( 'http-status-codes' );
 var err = err => {
-	throw new Error( err );
+	let error = new Error();
+	error.statusCode = err.statusCode;
+	error.responseCode = err.responseCode;
+	error.message = err.message;
+	throw error;
 };
 function makeid ( length ) {
 	var result = '';
@@ -85,7 +89,11 @@ Strategy.prototype.authenticate = async function ( req, options ) {
 	//Request must contain body
 	try {
 		if ( !req.body ) {
-			return req.res.json( {
+			// return req.res.json( {
+			// 	statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
+			// 	responseCode: STATUS_CODES.AUTH.BODY_NOT_FOUND
+			// } );
+			err( {
 				statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
 				responseCode: STATUS_CODES.AUTH.BODY_NOT_FOUND
 			} );
@@ -357,16 +365,14 @@ Strategy.prototype.authenticate = async function ( req, options ) {
 						);
 						console.log( result );
 						returnResp.email = {
-							statusCode: result.statusCode,
-							responseCode: STATUS_CODES.AUTH.OTP_SENT
+							...result
 						};
-						return req.res.json( returnResp );
+						return req.res.json( returnResp.email );
 					} catch ( error ) {
 						returnResp.email = {
-							statusCode: 500,
-							message: error.message
+							error
 						};
-						return req.res.json( returnResp );
+						return req.res.json( returnResp.email );
 					}
 				} );
 
@@ -426,13 +432,12 @@ Strategy.prototype.authenticate = async function ( req, options ) {
 							statusCode: result.statusCode,
 							responseCode: STATUS_CODES.AUTH.OTP_SENT
 						};
-						return req.res.json( returnResp );
+						return req.res.json( returnResp.phone );
 					} catch ( error ) {
 						returnResp.phone = {
-							statusCode: 500,
-							message: error.message
+							...error
 						};
-						return req.res.json( returnResp );
+						return req.res.json( returnResp.phone );
 					}
 				} );
 			}
@@ -464,7 +469,7 @@ var checkReRequestTime = async function ( req, data, qFrmt ) {
 	if ( timeDiff < this._resendAfter * 60 ) {
 		return Promise.reject(
 			{
-				statusCode: HTTP_STATUS_CODES.ACCEPTED,
+				statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
 				responseCode: STATUS_CODES.AUTH.CANNOT_SEND_OTP,
 				timeStamp: moment( moment.now() ).add( remSecs, 'seconds' ).toISOString()
 			}

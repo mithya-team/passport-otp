@@ -292,7 +292,8 @@ Strategy.prototype.authenticate = async function ( req, options ) {
 						self,
 						{ email, phone },
 						{ email: tokenEmail, phone: tokenPhone },
-						otp[ 0 ]
+						otp[ 0 ],
+						req
 					);
 					console.log( result );
 					returnResp.email = {
@@ -361,7 +362,8 @@ Strategy.prototype.authenticate = async function ( req, options ) {
 							self,
 							{ email },
 							token,
-							otp[ 0 ]
+							otp[ 0 ],
+							req
 						);
 						console.log( result );
 						returnResp.email = {
@@ -425,7 +427,8 @@ Strategy.prototype.authenticate = async function ( req, options ) {
 							self,
 							{ phone },
 							token,
-							otp[ 0 ]
+							otp[ 0 ],
+							req
 						);
 						console.log( result );
 						returnResp.phone = {
@@ -499,7 +502,7 @@ var createNewToken = function ( totpData, secret ) {
 	return { secret, token };
 };
 
-var sendDataViaProvider = async function ( data, token, otpIns ) {
+var sendDataViaProvider = async function ( data, token, otpIns, req ) {
 	let type, phone;
 	if ( data.phone && data.phone.phone ) {
 		type = "phone";
@@ -536,6 +539,7 @@ var sendDataViaProvider = async function ( data, token, otpIns ) {
 	customMailFnData.accessToken = accessToken;
 	customMailFnData.otpMedium = type;
 	customMailFnData.otpIns = otpIns;
+	customMailFnData.req = req;
 	let result = await this._messageProvider(
 		type,
 		{ ...data, phone },

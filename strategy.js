@@ -775,10 +775,18 @@ Strategy.prototype.submitToken = async function (req, data, token, type) {
 					respObj.accessToken = info.accessToken;
 				}
 			} else {
-				if (phoneVerReq && user.phoneVerified) {
+				if (phoneVerReq) {
+					if (user.phoneVerified)
+						respObj.accessToken = info.accessToken;
+				}
+				else {
 					respObj.accessToken = info.accessToken;
 				}
-				if (emailVerReq && user.emailVerified) {
+				if (emailVerReq) {
+					if (user.emailVerified)
+						respObj.accessToken = info.accessToken;
+				}
+				else {
 					respObj.accessToken = info.accessToken;
 				}
 			}

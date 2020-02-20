@@ -667,7 +667,7 @@ var createProfile = async function (result) {
 	if (result.userId) {
 		user = await result.user.get();
 		userIdentity = (await user.identities.getAsync()).map(i => { if (i.provider === this.provider) return i; });
-		externalId = userIdentity[0].externalId;
+		externalId = userIdentity[0] && userIdentity[0].externalId;
 	}
 	if (!externalId) {
 		externalId = makeid(10);

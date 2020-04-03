@@ -45,13 +45,15 @@ const Strategy = function (options, verify) {
 	this.defaultCountryCode = options.defaultCountryCode || false;
 	if (!this._resendAfter) {
 		err(`Provide resendAfter interval in authConfig.json`);
-	}
+    }
+    this._stepValue = options.stepValue || 30
 	this._otpDigits = options.digits;
 	this.method = options.method || "multiOr";
 
 	this._verificationRequired = options.verificationRequired && true;
 	this._totpData = {
-		encoding: "base32",
+        encoding: "base32",
+        step: this._stepValue,
 		window: this._window,
 		digits: this._otpDigits
 	};

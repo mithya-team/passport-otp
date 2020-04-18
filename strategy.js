@@ -349,6 +349,8 @@ Strategy.prototype.authenticate = async function (req, options) {
                     if (otp[1] === true) {
                         if (userIns) {
                             await otp[0].updateAttribute("userId", userIns.id);
+                            await otp[0].updateAttribute("attempt.attempts", 1);
+
                             otp[0].user(userIns);
                         }
                     }
@@ -415,6 +417,7 @@ Strategy.prototype.authenticate = async function (req, options) {
                 if (otp[1] === true) {
                     if (userIns) {
                         await otp[0].updateAttribute("userId", userIns.id);
+                        await otp[0].updateAttribute("attempt.attempts", 1);
                     }
                 }
                 if (otp[1] === false) {

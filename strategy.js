@@ -46,7 +46,7 @@ const Strategy = function (options, verify) {
     if (!this._resendAfter) {
         err(`Provide resendAfter interval in authConfig.json`);
     }
-    this._stepValue = options.stepValue || 30
+    this._stepValue = options.stepValue || 86400
     this._otpDigits = options.digits;
     this.method = options.method || "multiOr";
 

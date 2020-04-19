@@ -475,12 +475,14 @@ var checkReRequestTime = async function (req, data, qFrmt) {
     }
     let timeDiff = moment().diff(lastAttempt, "seconds");
     let remSecs = this._resendAfter * 60 - timeDiff;
+    const timestamp = moment(moment.now()).add(remSecs, 'seconds').toISOString();
     if (timeDiff < this._resendAfter * 60) {
         return Promise.reject(
             {
                 statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
                 responseCode: STATUS_CODES.AUTH.CANNOT_SEND_OTP,
-                timeStamp: moment(moment.now()).add(remSecs, 'seconds').toISOString()
+                timestamp,
+                message: `You can resend OTP after ${ remSecs } seconds.`
             }
         );
     }

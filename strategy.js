@@ -46,7 +46,7 @@ const Strategy = function (options, verify) {
     if (!this._resendAfter) {
         err(`Provide resendAfter interval in authConfig.json`);
     }
-    this._stepValue = options.stepValue || 86400
+    this._stepValue = options.stepValue || 300
     this._otpDigits = options.digits;
     this.method = options.method || "multiOr";
 
@@ -846,7 +846,7 @@ Strategy.prototype.verifyToken = async function (
         console.log(`IDENTITY_FOUND \n${ JSON.stringify(data) }\n${ JSON.stringify(result) }`);
     }
     let validToken = false;
-    let verifDataOps = this._totpData;
+    let verifyDataOps = {...this._totpData};
 
     let emailSecret, phoneSecret;
     let tokenEmail, tokenPhone;
@@ -858,26 +858,26 @@ Strategy.prototype.verifyToken = async function (
         if (!tokenEmail || !tokenPhone) {
             return Promise.reject(`BOTH_TOKEN_NEEDED`);
         }
-        verifDataOps.secret = emailSecret;
-        verifDataOps.token = tokenEmail;
-        let tokenValidates = speakeasy.totp.verify(verifDataOps);
+        verifyDataOps.secret = emailSecret;
+        verifyDataOps.token = tokenEmail;
+        let tokenValidates = speakeasy.totp.verify(verifyDataOps);
         if (!tokenValidates) {
             validToken = false;
         } else {
             validToken = true;
         }
-        verifDataOps.secret = phoneSecret;
-        verifDataOps.token = tokenPhone;
-        tokenValidates = speakeasy.totp.verify(verifDataOps);
+        verifyDataOps.secret = phoneSecret;
+        verifyDataOps.token = tokenPhone;
+        tokenValidates = speakeasy.totp.verify(verifyDataOps);
         if (!tokenValidates) {
             validToken = false;
         }
     } else if (type === "email") {
         emailSecret = result.secretEmail;
         tokenEmail = tokenEnteredByUser;
-        verifDataOps.secret = emailSecret;
-        verifDataOps.token = tokenEmail;
-        let tokenValidates = speakeasy.totp.verify(verifDataOps);
+        verifyDataOps.secret = emailSecret;
+        verifyDataOps.token = tokenEmail;
+        let tokenValidates = speakeasy.totp.verify(verifyDataOps);
         if (!tokenValidates) {
             validToken = false;
         } else {
@@ -887,10 +887,10 @@ Strategy.prototype.verifyToken = async function (
 
         phoneSecret = result.secretPhone;
         tokenPhone = tokenEnteredByUser;
-        verifDataOps.secret = phoneSecret;
-        verifDataOps.token = tokenPhone;
-        console.log(`checking for ${ JSON.stringify(verifDataOps) } `);
-        let tokenValidates = speakeasy.totp.verify(verifDataOps);
+        verifyDataOps.secret = phoneSecret;
+        verifyDataOps.token = tokenPhone;
+        console.log(`checking for ${ JSON.stringify(verifyDataOps) } `);
+        let tokenValidates = speakeasy.totp.verify(verifyDataOps);
         if (!tokenValidates) {
             validToken = false;
         } else {

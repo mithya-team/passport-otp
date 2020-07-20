@@ -151,7 +151,7 @@ Strategy.prototype.authenticate = async function (req, options) {
                     // therefore checking for both email and phone according to the availibility
                     // Assuming that this endpoint is recieving only single token
                     data.email = req.body.userIns.email;
-                    data.phone = req.body.userIns.phone.phone && req.body.userIns.phone;
+                    data.phone = _.get(req,`body.userIns.phone.phone`) && req.body.userIns.phone;
                     let resultEmail;
                     let errObj = {};
                     if (data.email) {

@@ -189,7 +189,11 @@ Strategy.prototype.authenticate = async function (req, options) {
                             await user.setPassword(req.body.password, {
                                 accessToken: incomingAccessToken
                             });
-                            await user.updateAttributes({ passwordSetup: true });
+                            await user.updateAttributes({ 
+                                passwordSetup: true,
+                                emailVerified: !!resultEmail,
+                                phoneVerified: !!resultPhone
+                            });
                             //todo pass
                             return req.res.json({
                                 statusCode: 200,

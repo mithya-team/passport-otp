@@ -180,7 +180,7 @@ Strategy.prototype.authenticate = async function (req, options) {
                     // let result = await this.verifyToken(req, data, token, "email");
                     if (resultEmail || resultPhone) {
                         let result = resultEmail || resultPhone;
-                        if (result.userId.toString() === userIns.id) {
+                        if (result.userId&&result.userId.toString() === userIns.id) {
                             let user = await User.findById(userIns.id);
                             let incomingAccessToken = req.body.extras.options && req.body.extras.options.accessToken;
                             if (!incomingAccessToken) {
@@ -324,6 +324,15 @@ Strategy.prototype.authenticate = async function (req, options) {
             }
             otpData.secretEmail = secret;
             otpData.email = email;
+            //find user by email
+            const userInstance = await User.findOne({
+                where:{
+                    email
+                }
+            })
+            if(userInstance){
+                otpData.userId=userInstance.id
+            }
             let otp;
             async function createOtpInstance(done) {
                 try {
@@ -355,6 +364,17 @@ Strategy.prototype.authenticate = async function (req, options) {
 
                     }
                     if (otp[1] === false) {
+                        if(!otp[0].userId){
+                            const userInstance = await User.findOne({
+                                where:{
+                                    email:otp[0].email
+                                }
+                            })
+                            if(userInstance){
+                                await otp[0].updateAttribute("userId", userInstance.id);
+                                otp[0].user(userInstance);
+                            }
+                        }
                         secret = otp[0].secretEmail;
                         token = createNewToken(self._totpData, secret);
                     }

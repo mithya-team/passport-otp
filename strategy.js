@@ -198,9 +198,10 @@ Strategy.prototype.authenticate = async function (req, options) {
                         }
                         else {
                             console.log(`Invalid userId`);
-                            return Promise.reject({
+                            return req.res.json({
                                 statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
-                                responseCode: STATUS_CODES.AUTH.USER_NOT_FOUND
+                                responseCode: STATUS_CODES.AUTH.USER_NOT_FOUND,
+                                message:`Invalid userId`
                             });
                         }
                     }

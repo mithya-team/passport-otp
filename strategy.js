@@ -103,8 +103,8 @@ Strategy.prototype.authenticate = async function (req, options) {
         let res = req.res;
         let Otp = req.app.models[this._modelName];
         let User = this._UserModel;
-        let userWhere = req.body.userWhere || {};
-        let otpWhere = req.body.otpWhere || {};
+        let userWhere = req.body.userWhere || _.get(req.body,`extras.userWhere`) || {};
+        let otpWhere = req.body.otpWhere || _.get(req.body,`extras.otpWhere`) || {};
         let otpExtraData = req.body.otpExtraData || {};
         let data = {};
         if (email) {
@@ -340,7 +340,8 @@ Strategy.prototype.authenticate = async function (req, options) {
                         { email },
                         token,
                         otp[0],
-                        req
+                        req,
+                        userWhere
                     );
                     console.log(result);
                     returnResp.email = {
@@ -411,7 +412,8 @@ Strategy.prototype.authenticate = async function (req, options) {
                         { phone },
                         token,
                         otp[0],
-                        req
+                        req,
+                        userWhere
                     );
                     console.log(result);
                     returnResp.phone = {
@@ -488,7 +490,7 @@ var createNewToken = function (totpData, secret) {
     return { secret, token };
 };
 
-var sendDataViaProvider = async function (data, token, otpIns, req) {
+var sendDataViaProvider = async function (data, token, otpIns, req, userWhere) {
     let type, phone;
     if (data.phone && data.phone.phone) {
         type = "phone";

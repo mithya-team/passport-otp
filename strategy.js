@@ -463,7 +463,8 @@ var checkReRequestTime = async function (req, data, qFrmt, otpWhere = {}) {
                 statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
                 responseCode: STATUS_CODES.AUTH.CANNOT_SEND_OTP,
                 timestamp,
-                responseMessage: `You can resend OTP after ${ remSecs } seconds.`
+                responseMessage: `You can resend OTP after ${ remSecs } seconds.`,
+                message: `You can resend OTP after ${ remSecs } seconds.`
             }
         );
     }

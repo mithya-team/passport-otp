@@ -242,7 +242,7 @@ Strategy.prototype.authenticate = async function (req, options) {
         }
 
         if (req.body.token) {
-            return await self.submitToken.call(self, req, data, req.body.token, type);
+            return await self.submitToken.call(self, req, data, req.body.token, type, otpWhere);
         }
         let userIns = req.body.userIns;
 

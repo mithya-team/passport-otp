@@ -699,7 +699,7 @@ var createProfile = async function (result) {
     return obj;
 };
 
-Strategy.prototype.submitToken = async function (req, data, token, type) {
+Strategy.prototype.submitToken = async function (req, data, token, type, otpWhere) {
     const self = this;
     let email = data.email || false;
     let phone = data.phone || false;

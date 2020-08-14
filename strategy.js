@@ -887,7 +887,8 @@ Strategy.prototype.verifyToken = async function (
     if (!validToken) {
         return Promise.reject({
             statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
-            responseCode: STATUS_CODES.AUTH.INVALID_TOKEN
+            responseCode: STATUS_CODES.AUTH.INVALID_TOKEN,
+            message: STATUS_CODES.getStatusText(STATUS_CODES.AUTH.INVALID_TOKEN)
         });
 
     }

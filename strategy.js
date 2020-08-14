@@ -76,7 +76,8 @@ Strategy.prototype.authenticate = async function (req, options) {
 
         return req.res.json({
             statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
-            responseCode: STATUS_CODES.AUTH.MODEL_NOT_FOUND
+            responseCode: STATUS_CODES.AUTH.MODEL_NOT_FOUND,
+            message: STATUS_CODES.getStatusText(STATUS_CODES.AUTH.MODEL_NOT_FOUND)
         });
     }
     req.app.models[this._modelName].belongsTo(this._UserModel, {
@@ -93,7 +94,8 @@ Strategy.prototype.authenticate = async function (req, options) {
             // } );
             err({
                 statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
-                responseCode: STATUS_CODES.AUTH.BODY_NOT_FOUND
+                responseCode: STATUS_CODES.AUTH.BODY_NOT_FOUND,
+                message: STATUS_CODES.getStatusText(STATUS_CODES.AUTH.BODY_NOT_FOUND)
             });
         }
 
@@ -122,7 +124,8 @@ Strategy.prototype.authenticate = async function (req, options) {
                 // && instead of || ??
                 return res.json({
                     statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
-                    responseCode: STATUS_CODES.AUTH.INVALID_PHONE_DATA
+                    responseCode: STATUS_CODES.AUTH.INVALID_PHONE_DATA,
+                    message: STATUS_CODES.getStatusText(STATUS_CODES.AUTH.INVALID_PHONE_DATA)
                 });
             }
             await validate([phone.countryCode, phone.phone], "phone");
@@ -132,7 +135,8 @@ Strategy.prototype.authenticate = async function (req, options) {
             if (!email && !req.body.password) {
                 return Promise.reject({
                     statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
-                    responseCode: STATUS_CODES.AUTH.DATA_NOT_FOUND
+                    responseCode: STATUS_CODES.AUTH.DATA_NOT_FOUND,
+                    message: STATUS_CODES.getStatusText(STATUS_CODES.AUTH.DATA_NOT_FOUND)
                 });
             }
             if (req.body.password && req.body.userIns && req.body.token) {
@@ -418,7 +422,8 @@ Strategy.prototype.authenticate = async function (req, options) {
                     console.log(result);
                     returnResp.phone = {
                         statusCode: result.statusCode,
-                        responseCode: STATUS_CODES.AUTH.OTP_SENT
+                        responseCode: STATUS_CODES.AUTH.OTP_SENT,
+                        message: STATUS_CODES.getStatusText(STATUS_CODES.AUTH.OTP_SENT)
                     };
                     return req.res.json(returnResp.phone);
                 } catch (error) {
@@ -541,6 +546,7 @@ var sendDataViaProvider = async function (data, token, otpIns, req, userWhere) {
         return Promise.reject({
             statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
             responseCode: errCode,
+            message: STATUS_CODES.getStatusText(errCode)
         });
     }
     return result;
@@ -722,7 +728,8 @@ Strategy.prototype.submitToken = async function (req, data, token, type, otpWher
         if (!user) {
             return req.res.json({
                 statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
-                responseCode: STATUS_CODES.AUTH.USER_NOT_FOUND
+                responseCode: STATUS_CODES.AUTH.USER_NOT_FOUND,
+                message: STATUS_CODES.getStatusText(STATUS_CODES.AUTH.USER_NOT_FOUND)
             });
         }
         // Assuming that the fields which are coming in an result(OTP) instance
@@ -824,7 +831,8 @@ Strategy.prototype.verifyToken = async function (
     if (!result) {
         return Promise.reject({
             statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
-            responseCode: STATUS_CODES.AUTH.INVALID_DATA
+            responseCode: STATUS_CODES.AUTH.INVALID_DATA,
+            message: STATUS_CODES.getStatusText(STATUS_CODES.AUTH.INVALID_DATA)
         });
     }
     if (result) {

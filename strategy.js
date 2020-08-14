@@ -432,9 +432,10 @@ Strategy.prototype.authenticate = async function (req, options) {
         // }
     } catch (error) {
         console.log(error);
+        
         return req.res.json({
             statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
-            message: error.message || error
+            message: typeof error.message==='string'? error : error.message
         });
     }
 };

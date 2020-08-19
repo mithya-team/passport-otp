@@ -246,7 +246,7 @@ Strategy.prototype.authenticate = async function (req, options) {
         }
 
         if (req.body.token) {
-            return await self.submitToken.call(self, req, data, req.body.token, type, otpWhere);
+            return await self.submitToken.call(self, req, data, req.body.token, type, otpWhere, userWhere);
         }
         let userIns = req.body.userIns;
 
@@ -660,13 +660,21 @@ var defaultCallback = (self, type, email, phone, result, redirect) => async (
     }
 };
 
-var createProfile = async function (result) {
+var createProfile = async function (result, userWhere = {}) {
     // if existing user
     let user, userIdentity, externalId;
+    
     if (result.userId) {
         user = await result.user.get();
-        userIdentity = (await user.identities.getAsync()).map(i => { if (i.provider === this.provider) return i; });
-        externalId = userIdentity[0] && userIdentity[0].externalId;
+        let userIdentity = await this._UserModel.app.models.UserIdentity.findOne({
+            where:{
+                provider: this.provider,
+                userId:result.userId.toString(),
+                ...userWhere
+            }
+        })
+        externalId = _.get(userIdentity || {},`externalId`)
+        
     }
     if (!externalId) {
         externalId = makeid(10);
@@ -681,6 +689,10 @@ var createProfile = async function (result) {
             }
         ];
         obj.id = externalId;
+        obj = {
+            ...obj,
+            ...userWhere
+        }
         delete result["email"]; //changes
     }
     if (result.phone && result.phone.phone) {
@@ -702,12 +714,16 @@ var createProfile = async function (result) {
         if (!obj.id) {
             obj.id = externalId;
         }
+        obj = {
+            ...obj,
+            ...userWhere
+        }
         delete result["phone"];
     }
     return obj;
 };
 
-Strategy.prototype.submitToken = async function (req, data, token, type, otpWhere) {
+Strategy.prototype.submitToken = async function (req, data, token, type, otpWhere, userWhere) {
     const self = this;
     let email = data.email || false;
     let phone = data.phone || false;
@@ -747,7 +763,7 @@ Strategy.prototype.submitToken = async function (req, data, token, type, otpWher
             result.email = tmpEmail;
         }
     }
-    var profile = await createProfile.call(this, result);
+    var profile = await createProfile.call(this, result, userWhere);
     let redirect = this.redirectEnabled || false;
     if (!redirect) {
         redirect = async function (err, user, info, emailFirstTime, phoneFirstTime) {

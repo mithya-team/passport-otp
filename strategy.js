@@ -201,8 +201,8 @@ Strategy.prototype.authenticate = async function (req, options) {
                                 emailVerified: !!resultEmail,
                                 phoneVerified: !!resultPhone
                             });
-                            this._UserModel.emit('emailVerified',!!resultEmail)
-                            this._UserModel.emit('phoneVerified',!!resultPhone)
+                            this._UserModel.emit('emailVerified',!!resultEmail,user)
+                            this._UserModel.emit('phoneVerified',!!resultPhone,user)
 
                             //todo pass
                             return req.res.json({
@@ -628,9 +628,9 @@ var defaultCallback = (self, type, email, phone, result, redirect) => async (
             emailFirstTime = true;
         }
         await user.updateAttribute("phoneVerified", true);
-        this._UserModel.emit('phoneVerified', true)
+        self._UserModel.emit('phoneVerified', true,user)
         await user.updateAttribute("emailVerified", true);
-        this._UserModel.emit('emailVerified',true)
+        self._UserModel.emit('emailVerified', true, user)
         
     } else {
         if (phone && phone.phone && type === "phone") {
@@ -643,7 +643,7 @@ var defaultCallback = (self, type, email, phone, result, redirect) => async (
                 await user.updateAttribute("phone", phone);
             }
             await user.updateAttribute("phoneVerified", true);
-            this._UserModel.emit('phoneVerified',true)
+            self._UserModel.emit('phoneVerified', true, user)
             await user.updateAttribute("phoneSetup", true);
         }
         if (email && type === "email") {
@@ -655,7 +655,7 @@ var defaultCallback = (self, type, email, phone, result, redirect) => async (
                 await user.updateAttribute("email", email);
             }
             await user.updateAttribute("emailVerified", true);
-            this._UserModel.emit('emailVerified',true)
+            self._UserModel.emit('emailVerified', true, user)
             await user.updateAttribute("emailSetup", true);
         }
     }

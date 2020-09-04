@@ -167,7 +167,7 @@ Strategy.prototype.authenticate = async function (req, options) {
                         try {
                             resultEmail = await this.verifyToken(req, data, token, "email", otpWhere);
                         } catch (error) {
-                            errObj.email = error.message || error;
+                            errObj.email =  error;
                             resultEmail = false;
                         }
                     }
@@ -178,7 +178,7 @@ Strategy.prototype.authenticate = async function (req, options) {
                         try {
                             resultPhone = await this.verifyToken(req, data, token, "phone", otpWhere);
                         } catch (error) {
-                            errObj.phone = error.message || error;
+                            errObj.phone =  error;
                             resultPhone = false;
                         }
                     }
@@ -873,7 +873,11 @@ Strategy.prototype.verifyToken = async function (
         tokenEmail = tokenEnteredByUser.email;
         tokenPhone = tokenEnteredByUser.phone;
         if (!tokenEmail || !tokenPhone) {
-            return Promise.reject(`BOTH_TOKEN_NEEDED`);
+            return Promise.reject({
+                statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
+                responseCode: STATUS_CODES.AUTH.INVALID_DATA,
+                message: 'BOTH_TOKEN_NEEDED'
+            });
         }
         verifyDataOps.secret = emailSecret;
         verifyDataOps.token = tokenEmail;

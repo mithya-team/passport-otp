@@ -399,11 +399,15 @@ Strategy.prototype.authenticate = async function (req, options) {
                 }
             }
             User.notifyObserversAround('otp instance', otpData, createOtpInstance, async function (err) {
-                if (err) throw err;
+                if (err)  return req.res.json({
+                    statusCode: err.statusCode,
+                    message: err.message,
+                })
+                if (userIns) {
+                    await otp[0].updateAttribute("userId", userIns.id);
+                }
                 if (otp[1] === true) {
-                    if (userIns) {
-                        await otp[0].updateAttribute("userId", userIns.id);
-                    }
+                    
                     await otp[0].updateAttribute("attempt.attempts", 1);
                 }
                 if (otp[1] === false) {
@@ -749,6 +753,14 @@ Strategy.prototype.submitToken = async function (req, data, token, type, otpWher
     if (result.userId) {
         //this was an authenticated request
         let user = await User.findById(result.userId);
+        if(req.body.userIns){
+            if(_.get(req,'body.userIns.id', '').toString() !== user.id.toString()){
+                return req.res.json({
+                    statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
+                    message: 'User mismatch.'
+                });
+            }
+        }
         if (!user) {
             return req.res.json({
                 statusCode: HTTP_STATUS_CODES.BAD_REQUEST,

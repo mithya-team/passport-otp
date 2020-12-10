@@ -357,7 +357,7 @@ Strategy.prototype.authenticate = async function (req, options) {
                     return req.res.json(returnResp.email);
                 } catch (error) {
                     returnResp.email = {
-                        error
+                        ...error
                     };
                     return req.res.json(returnResp.email);
                 }

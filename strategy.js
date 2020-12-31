@@ -936,7 +936,7 @@ Strategy.prototype.verifyToken = async function (
     })
 
     if(process.env.NODE_ENV==='staging' || process.env.NODE_ENV==='development'){
-        if(tokenEmail===323232 || tokenPhone===323232){
+        if(tokenEmail==="323232" || tokenPhone==="323232"){
             return result
         }
     }

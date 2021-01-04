@@ -620,7 +620,10 @@ var defaultCallback = (self, type, email, phone, result, redirect) => async (
     }
     if (result.password) {
         //might get logged out
-        await user.updateAttribute("password", result.password);
+        await user.setPassword(result.password, {
+            accessToken: info.accessToken
+        });
+        // await user.updateAttribute("password", result.password);
         await user.updateAttribute("passwordSetup", true);
     }
     // todo WARN can verify both

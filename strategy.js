@@ -130,6 +130,7 @@ Strategy.prototype.authenticate = async function (req, options) {
             }
             await validate([phone.countryCode, phone.phone], "phone");
             data.phone = phone;
+            data.countryCode = data.countryCodeText || ""
         } else {
             //.....
             if (!email && !req.body.password) {

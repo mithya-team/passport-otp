@@ -831,9 +831,9 @@ Strategy.prototype.submitToken = async function (req, data, token, type, otpWher
                 }
             }
             if (!respObj.accessToken) {
-                user.accessTokens.destroyAll({
-                    where: user.userId
-                });
+                // user.accessTokens.destroyAll({
+                //     where: user.userId
+                // });
             }
             return req.res.json({
                 statusCode: 200,

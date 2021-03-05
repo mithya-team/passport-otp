@@ -562,7 +562,8 @@ var sendDataViaProvider = async function (data, token, otpIns, req, userWhere) {
         return Promise.reject({
             statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
             responseCode: errCode,
-            message: STATUS_CODES.getStatusText(errCode)
+            responseCodeMessage: STATUS_CODES.getStatusText(errCode),
+            providerErrorMessage: result
         });
     }
     return result;

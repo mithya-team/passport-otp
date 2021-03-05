@@ -621,7 +621,16 @@ var defaultCallback = (self, type, email, phone, result, redirect) => async (
     if (err) {
         return self.error(err);
     }
-    user.updateAttributes({ username: _.get(info, `identity.profile.username`) });
+    try {
+        await user.updateAttributes({ username: _.get(info, `identity.profile.username`) });
+    } catch (error) {
+        if (typeof redirect === "function"){
+            return await redirect(error);
+        }
+        else{
+            self.error(error);
+        }
+    }
     let emailFirstTime = false,
         phoneFirstTime = false;
     if (!user && typeof redirect !== "function") {
@@ -799,7 +808,7 @@ Strategy.prototype.submitToken = async function (req, data, token, type, otpWher
     let redirect = this.redirectEnabled || false;
     if (!redirect) {
         redirect = async function (err, user, info, emailFirstTime, phoneFirstTime) {
-            if (err) return req.res.json({ err });
+            if (err) return req.res.json(err);
             let ctx = {};
             ctx.user = user,
                 ctx.newUser = newUser;

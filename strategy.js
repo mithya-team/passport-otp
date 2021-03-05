@@ -445,19 +445,24 @@ Strategy.prototype.authenticate = async function (req, options) {
         // }
     } catch (error) {
         console.log(error);
-        const errResponse = {
-            statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
-            message: typeof error.message==='string'? error : error.message
-        }
+        // const errResponse = {
+        //     statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
+        //     message: typeof error.message==='string'? error.message : error.message
+        // }
 
-        if(typeof error.message==='string'){
-            const responseCodeMessage = STATUS_CODES.getStatusNumber(error.message);
-            if(responseCodeMessage){
-                errResponse.responseCode = responseCodeMessage;
-            }
-        }
+        // if(typeof error.message==='string'){
+        //     const responseCodeMessage = STATUS_CODES.getStatusNumber(error.message);
+        //     if(responseCodeMessage){
+        //         errResponse.responseCode = responseCodeMessage;
+        //     }
+        // }
         
-        return req.res.json(errResponse);
+        // return req.res.json(errResponse);
+
+        return req.res.json({
+            ...error,
+            statusCode: error.statusCode || HTTP_STATUS_CODES.BAD_REQUEST,
+        });
     }
 };
 

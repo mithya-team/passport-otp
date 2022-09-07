@@ -13,7 +13,7 @@ function makeid(length) {
     var result = '';
     var characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     var charactersLength = characters.length;
-    for (var i = 0;i < length;i++) {
+    for (var i = 0; i < length; i++) {
         result += characters.charAt(Math.floor(Math.random() * charactersLength));
     }
     return result;
@@ -105,8 +105,8 @@ Strategy.prototype.authenticate = async function (req, options) {
         let res = req.res;
         let Otp = req.app.models[this._modelName];
         let User = this._UserModel;
-        let userWhere = req.body.userWhere || _.get(req.body,`extras.userWhere`) || {};
-        let otpWhere = req.body.otpWhere || _.get(req.body,`extras.otpWhere`) || {};
+        let userWhere = req.body.userWhere || _.get(req.body, `extras.userWhere`) || {};
+        let otpWhere = req.body.otpWhere || _.get(req.body, `extras.otpWhere`) || {};
         let otpExtraData = req.body.otpExtraData || {};
         let data = {};
         if (email) {
@@ -159,7 +159,7 @@ Strategy.prototype.authenticate = async function (req, options) {
                     // therefore checking for both email and phone according to the availibility
                     // Assuming that this endpoint is recieving only single token
                     data.email = req.body.userIns.email;
-                    data.phone = _.get(req,`body.userIns.phone.phone`) && req.body.userIns.phone;
+                    data.phone = _.get(req, `body.userIns.phone.phone`) && req.body.userIns.phone;
                     let resultEmail;
                     let errObj = {};
                     if (data.email) {
@@ -168,7 +168,7 @@ Strategy.prototype.authenticate = async function (req, options) {
                         try {
                             resultEmail = await this.verifyToken(req, data, token, "email", otpWhere);
                         } catch (error) {
-                            errObj.email =  error;
+                            errObj.email = error;
                             resultEmail = false;
                         }
                     }
@@ -179,7 +179,7 @@ Strategy.prototype.authenticate = async function (req, options) {
                         try {
                             resultPhone = await this.verifyToken(req, data, token, "phone", otpWhere);
                         } catch (error) {
-                            errObj.phone =  error;
+                            errObj.phone = error;
                             resultPhone = false;
                         }
                     }
@@ -188,7 +188,7 @@ Strategy.prototype.authenticate = async function (req, options) {
                     // let result = await this.verifyToken(req, data, token, "email");
                     if (resultEmail || resultPhone) {
                         let result = resultEmail || resultPhone;
-                        if (result.userId&&result.userId.toString() === userIns.id) {
+                        if (result.userId && result.userId.toString() === userIns.id) {
                             let user = await User.findById(userIns.id);
                             let incomingAccessToken = req.body.extras.options && req.body.extras.options.accessToken;
                             if (!incomingAccessToken) {
@@ -197,13 +197,13 @@ Strategy.prototype.authenticate = async function (req, options) {
                             await user.setPassword(req.body.password, {
                                 accessToken: incomingAccessToken
                             });
-                            await user.updateAttributes({ 
+                            await user.updateAttributes({
                                 passwordSetup: true,
                                 emailVerified: !!resultEmail,
                                 phoneVerified: !!resultPhone
                             });
-                            this._UserModel.emit('emailVerified',!!resultEmail,user)
-                            this._UserModel.emit('phoneVerified',!!resultPhone,user)
+                            this._UserModel.emit('emailVerified', !!resultEmail, user)
+                            this._UserModel.emit('phoneVerified', !!resultPhone, user)
 
                             //todo pass
                             return req.res.json({
@@ -216,7 +216,7 @@ Strategy.prototype.authenticate = async function (req, options) {
                             return req.res.json({
                                 statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
                                 responseCode: STATUS_CODES.AUTH.USER_NOT_FOUND,
-                                message:`Invalid userId`
+                                message: `Invalid userId`
                             });
                         }
                     }
@@ -266,7 +266,7 @@ Strategy.prototype.authenticate = async function (req, options) {
         }
         let returnResp = {};
         this._reqBody = req.body;
-        
+
         if (email) {
             let otpData = {};
             await checkReRequestTime.call(this, req, { email }, otpWhere);
@@ -278,16 +278,16 @@ Strategy.prototype.authenticate = async function (req, options) {
             otpData.email = email;
             //find user by email
             const userInstance = await User.findOne({
-                where:{
+                where: {
                     email,
                     ...userWhere
                 }
             })
-            if(userInstance){
-                otpData.userId=userInstance.id
+            if (userInstance) {
+                otpData.userId = userInstance.id
             }
 
-            otpData={
+            otpData = {
                 ...otpData,
                 ...otpExtraData,
             }
@@ -324,14 +324,14 @@ Strategy.prototype.authenticate = async function (req, options) {
 
                     }
                     if (otp[1] === false) {
-                        if(!otp[0].userId){
+                        if (!otp[0].userId) {
                             const userInstance = await User.findOne({
-                                where:{
-                                    email:otp[0].email,
+                                where: {
+                                    email: otp[0].email,
                                     ...userWhere
                                 }
                             })
-                            if(userInstance){
+                            if (userInstance) {
                                 await otp[0].updateAttribute("userId", userInstance.id);
                                 otp[0].user(userInstance);
                             }
@@ -343,20 +343,29 @@ Strategy.prototype.authenticate = async function (req, options) {
                     User.emit('generatedToken', token);
                     let result;
 
-                    result = await sendDataViaProvider.call(
-                        self,
-                        { email },
-                        token,
-                        otp[0],
-                        req,
-                        userWhere
-                    );
+                    try {
+                        result = await sendDataViaProvider.call(
+                            self,
+                            { email },
+                            token,
+                            otp[0],
+                            req,
+                            userWhere
+                        );
+                    } catch (error) {
+                        error.isDataProviderError = true;
+                        throw error;
+                    }
                     console.log(result);
                     returnResp.email = {
                         ...result
                     };
                     return req.res.json(returnResp.email);
                 } catch (error) {
+                    if (error.isDataProviderError) {
+                        // Set last attempt to old date
+                        await otp[0].updateAttribute("lastAttempt", new Date(0));
+                    }
                     returnResp.email = {
                         ...error
                     };
@@ -376,7 +385,7 @@ Strategy.prototype.authenticate = async function (req, options) {
             if (req.body.password) {
                 otpData.password = User.hashPassword(req.body.password);
             }
-            otpData={
+            otpData = {
                 ...otpData,
                 ...otpExtraData,
             }
@@ -400,7 +409,7 @@ Strategy.prototype.authenticate = async function (req, options) {
                 }
             }
             User.notifyObserversAround('otp instance', otpData, createOtpInstance, async function (err) {
-                if (err)  return req.res.json({
+                if (err) return req.res.json({
                     statusCode: err.statusCode,
                     message: err.message,
                 })
@@ -408,7 +417,7 @@ Strategy.prototype.authenticate = async function (req, options) {
                     await otp[0].updateAttribute("userId", userIns.id);
                 }
                 if (otp[1] === true) {
-                    
+
                     await otp[0].updateAttribute("attempt.attempts", 1);
                 }
                 if (otp[1] === false) {
@@ -419,14 +428,19 @@ Strategy.prototype.authenticate = async function (req, options) {
                 User.emit('generatedToken', token);
                 let result;
                 try {
-                    result = await sendDataViaProvider.call(
-                        self,
-                        { phone },
-                        token,
-                        otp[0],
-                        req,
-                        userWhere
-                    );
+                    try {
+                        result = await sendDataViaProvider.call(
+                            self,
+                            { phone },
+                            token,
+                            otp[0],
+                            req,
+                            userWhere
+                        );
+                    } catch (error) {
+                        error.isDataProviderError = true;
+                        throw error;
+                    }
                     console.log(result);
                     returnResp.phone = {
                         statusCode: result.statusCode,
@@ -435,6 +449,10 @@ Strategy.prototype.authenticate = async function (req, options) {
                     };
                     return req.res.json(returnResp.phone);
                 } catch (error) {
+                    if (error.isDataProviderError) {
+                        // Set last attempt to old date
+                        await otp[0].updateAttribute("lastAttempt", new Date(0));
+                    }
                     returnResp.phone = {
                         ...error
                     };
@@ -456,7 +474,7 @@ Strategy.prototype.authenticate = async function (req, options) {
         //         errResponse.responseCode = responseCodeMessage;
         //     }
         // }
-        
+
         // return req.res.json(errResponse);
 
         return req.res.json({
@@ -489,8 +507,8 @@ var checkReRequestTime = async function (req, data, qFrmt, otpWhere = {}) {
                 statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
                 responseCode: STATUS_CODES.AUTH.CANNOT_SEND_OTP,
                 timestamp,
-                responseMessage: `You can resend verification code after ${ remSecs } seconds.`,
-                message: `You can resend verification code after ${ remSecs } seconds.`
+                responseMessage: `You can resend verification code after ${remSecs} seconds.`,
+                message: `You can resend verification code after ${remSecs} seconds.`
             }
         );
     }
@@ -630,10 +648,10 @@ var defaultCallback = (self, type, email, phone, result, redirect) => async (
     try {
         await user.updateAttributes({ username: _.get(info, `identity.profile.username`) });
     } catch (error) {
-        if (typeof redirect === "function"){
+        if (typeof redirect === "function") {
             return await redirect(error);
         }
-        else{
+        else {
             self.error(error);
         }
     }
@@ -659,10 +677,10 @@ var defaultCallback = (self, type, email, phone, result, redirect) => async (
             emailFirstTime = true;
         }
         await user.updateAttribute("phoneVerified", true);
-        self._UserModel.emit('phoneVerified', true,user)
+        self._UserModel.emit('phoneVerified', true, user)
         await user.updateAttribute("emailVerified", true);
         self._UserModel.emit('emailVerified', true, user)
-        
+
     } else {
         if (phone && phone.phone && type === "phone") {
             if (!user.phoneVerified) {
@@ -702,18 +720,18 @@ var defaultCallback = (self, type, email, phone, result, redirect) => async (
 var createProfile = async function (result, userWhere = {}) {
     // if existing user
     let user, userIdentity, externalId;
-    
+
     if (result.userId) {
         user = await result.user.get();
         let userIdentity = await this._UserModel.app.models.UserIdentity.findOne({
-            where:{
+            where: {
                 provider: this.provider,
-                userId:result.userId.toString(),
+                userId: result.userId.toString(),
                 ...userWhere
             }
         })
-        externalId = _.get(userIdentity || {},`externalId`)
-        
+        externalId = _.get(userIdentity || {}, `externalId`)
+
     }
     if (!externalId) {
         externalId = makeid(10);
@@ -780,8 +798,8 @@ Strategy.prototype.submitToken = async function (req, data, token, type, otpWher
     if (result.userId) {
         //this was an authenticated request
         let user = await User.findById(result.userId);
-        if(req.body.userIns){
-            if(_.get(req,'body.userIns.id', '').toString() !== user.id.toString()){
+        if (req.body.userIns) {
+            if (_.get(req, 'body.userIns.id', '').toString() !== user.id.toString()) {
                 return req.res.json({
                     statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
                     message: 'User mismatch.'
@@ -899,10 +917,10 @@ Strategy.prototype.verifyToken = async function (
         });
     }
     if (result) {
-        console.log(`IDENTITY_FOUND \n${ JSON.stringify(data) }\n${ JSON.stringify(result) }`);
+        console.log(`IDENTITY_FOUND \n${JSON.stringify(data)}\n${JSON.stringify(result)}`);
     }
     let validToken = false;
-    let verifyDataOps = {...this._totpData};
+    let verifyDataOps = { ...this._totpData };
 
     let emailSecret, phoneSecret;
     let tokenEmail, tokenPhone;
@@ -949,7 +967,7 @@ Strategy.prototype.verifyToken = async function (
         tokenPhone = tokenEnteredByUser;
         verifyDataOps.secret = phoneSecret;
         verifyDataOps.token = tokenPhone;
-        console.log(`checking for ${ JSON.stringify(verifyDataOps) } `);
+        console.log(`checking for ${JSON.stringify(verifyDataOps)} `);
         let tokenValidates = speakeasy.totp.verify(verifyDataOps);
         if (!tokenValidates) {
             validToken = false;
@@ -962,13 +980,13 @@ Strategy.prototype.verifyToken = async function (
         "attempt.verificationAttempts": verificationAttempts + 1
     })
 
-    if(process.env.NODE_ENV==='staging' || process.env.NODE_ENV==='development'){
-        if(tokenEmail==="323232" || tokenPhone==="323232"){
+    if (process.env.NODE_ENV === 'staging' || process.env.NODE_ENV === 'development') {
+        if (tokenEmail === "323232" || tokenPhone === "323232") {
             return result
         }
     }
 
-    if (!validToken && !(process.env.NODE_ENV==='staging' && validToken===2)) {
+    if (!validToken && !(process.env.NODE_ENV === 'staging' && validToken === 2)) {
         return Promise.reject({
             statusCode: HTTP_STATUS_CODES.BAD_REQUEST,
             responseCode: STATUS_CODES.AUTH.INVALID_TOKEN,

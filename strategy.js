@@ -364,7 +364,7 @@ Strategy.prototype.authenticate = async function (req, options) {
                 } catch (error) {
                     if (error.isDataProviderError) {
                         // Set last attempt to old date
-                        await otp[0].updateAttribute("lastAttempt", new Date(0));
+                        await otp[0].updateAttribute("attempt.lastAttempt", new Date(0));
                     }
                     returnResp.email = {
                         ...error
@@ -451,7 +451,7 @@ Strategy.prototype.authenticate = async function (req, options) {
                 } catch (error) {
                     if (error.isDataProviderError) {
                         // Set last attempt to old date
-                        await otp[0].updateAttribute("lastAttempt", new Date(0));
+                        await otp[0].updateAttribute("attempt.lastAttempt", new Date(0));
                     }
                     returnResp.phone = {
                         ...error

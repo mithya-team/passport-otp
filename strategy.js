@@ -739,7 +739,7 @@ var createProfile = async function (result, userWhere = {}) {
     let obj = {};
     if (result.email) {
         obj.email = result.email;
-        obj.username = obj.email;
+        obj.username = result.username || obj.email;
         obj.emails = [
             {
                 value: obj.email

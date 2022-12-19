@@ -1,6 +1,6 @@
 {
   "name": "passport-otp",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Phone OTP authentication via passport.",
   "main": "index.js",
   "scripts": {

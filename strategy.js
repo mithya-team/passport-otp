@@ -738,8 +738,9 @@ var createProfile = async function (result, userWhere = {}) {
     }
     let obj = {};
     if (result.email) {
+        let userName = (user && user.username) || result.email;
         obj.email = result.email;
-        obj.username = user?.username || obj.email;
+        obj.username = userName;
         obj.emails = [
             {
                 value: obj.email
